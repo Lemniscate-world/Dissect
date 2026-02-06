@@ -100,24 +100,27 @@ def detect_quicksort(node, code_bytes):
         # Traverse AST to find complexity factors
         def traverse(n):
             nonlocal depth, nested_loops
-            if n['type'] == 'loop_block':
+            if n.get('type') == 'loop_block':
                 nested_loops += 1
                 depth = max(depth, nested_loops)
-            for c in n['children']:
+            for c in n.get('children', []):
                 traverse(c)
-            if n['type'] == ['for_statement', 'while_statement']:
+            # Corrected check from '==' to 'in'
+            if n.get('type') in ['for_statement', 'while_statement']:
                 nested_loops -= 1
         
         traverse(node)
 
         # Complexity determination
-        if depth == 1 and 'recursive' in node['operations']:
+        # Heuristic based on depth and recursion
+        if depth <= 1 and recursive_calls >= 1:
             return 'O(n log n)' # Best Case
-        elif depth == 2:
+        elif depth >= 2:
             return 'O(n^2)' # Worst Case
         return 'unknown'
     
-
+    # Actually calculate it
+    detected_complexity = estimate_complexity(normalized_ast)
 
     # Confidence Calculation
     def calculate_confidence(partition, recursion, complexity):
@@ -134,11 +137,14 @@ def detect_quicksort(node, code_bytes):
         # Complexity bonus
         if complexity == 'O(n log n)':
             score += 0.2
-        elif complexity == 'O(n²)':
+        elif complexity == 'O(n^2)': # Corrected unicode to ascii if needed, but keeping consistency
             score += 0.1
             
         return min(score * 1.2, 1.0)  # Allow slight overconfidence
 
+
+    # Calculate confidence using the detected complexity
+    confidence = calculate_confidence(partitioning >= 1, recursive_calls >= 1, detected_complexity)
 
     # Final validation check
     is_quicksort = (
@@ -149,5 +155,7 @@ def detect_quicksort(node, code_bytes):
     
     return {
         "is_quicksort": is_quicksort,
-        "confidence": min(confidence, 1.0)
+        "confidence": min(confidence, 1.0),
+        "complexity": detected_complexity,
+        "type": "sorting"
     }

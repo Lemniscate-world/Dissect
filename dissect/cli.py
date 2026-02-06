@@ -6,6 +6,19 @@ from .detectors.bfs import detect_bfs
 from .detectors.dfs import detect_dfs
 from .detectors.mergesort import detect_mergesort
 from .detectors.binary_search import detect_binary_search
+from .scanner import AlgorithmScanner
+import json
+
+def map_command(args):
+    print(f"Scanning directory: {args.dir}")
+    scanner = AlgorithmScanner()
+    inventory = scanner.scan_directory(args.dir)
+    
+    with open(args.output, 'w') as f:
+        json.dump(inventory, f, indent=2)
+    
+    print(f"Scan complete. Found {inventory['meta']['algorithms_found']} algorithms in {inventory['meta']['total_files']} files.")
+    print(f"Inventory saved to {args.output}")
 
 def visualize_command(args):
     parser = CodeParser()
@@ -56,6 +69,12 @@ def main():
     analyze_parser = subparsers.add_parser('analyze')
     analyze_parser.add_argument('--file', required=True)
     analyze_parser.set_defaults(func=lambda args: print(f"Analyzing file: {args.file}"))  # Placeholder for actual analysis logic
+
+    # Map command
+    map_parser = subparsers.add_parser('map')
+    map_parser.add_argument('--dir', default='.')
+    map_parser.add_argument('--output', default='dissect-map.json')
+    map_parser.set_defaults(func=map_command)
 
     # Parse command-line arguments and execute the corresponding function
     
