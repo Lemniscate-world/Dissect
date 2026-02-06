@@ -1,0 +1,109 @@
+{
+    "spans": [
+        {
+            "spanId": "span-001",
+            "parentSpanId": null,
+            "name": "User Query",
+            "startTimeUnixNano": 1707000000000000000,
+            "endTimeUnixNano": 1707000000050000000,
+            "attributes": [
+                {
+                    "key": "user_input",
+                    "value": {
+                        "stringValue": "true"
+                    }
+                }
+            ]
+        },
+        {
+            "spanId": "span-002",
+            "parentSpanId": "span-001",
+            "name": "Research Agent",
+            "startTimeUnixNano": 1707000000050000000,
+            "endTimeUnixNano": 1707000000500000000,
+            "attributes": [
+                {
+                    "key": "langchain.agent",
+                    "value": {
+                        "stringValue": "true"
+                    }
+                }
+            ]
+        },
+        {
+            "spanId": "span-003",
+            "parentSpanId": "span-002",
+            "name": "Web Search Tool",
+            "startTimeUnixNano": 1707000000100000000,
+            "endTimeUnixNano": 1707000000300000000,
+            "attributes": [
+                {
+                    "key": "langchain.tool",
+                    "value": {
+                        "stringValue": "web_search"
+                    }
+                }
+            ]
+        },
+        {
+            "spanId": "span-004",
+            "parentSpanId": "span-002",
+            "name": "GPT-4 Call",
+            "startTimeUnixNano": 1707000000300000000,
+            "endTimeUnixNano": 1707000000480000000,
+            "attributes": [
+                {
+                    "key": "openai.chat",
+                    "value": {
+                        "stringValue": "gpt-4"
+                    }
+                }
+            ]
+        },
+        {
+            "spanId": "span-005",
+            "parentSpanId": "span-001",
+            "name": "Writer Agent",
+            "startTimeUnixNano": 1707000000500000000,
+            "endTimeUnixNano": 1707000000900000000,
+            "attributes": [
+                {
+                    "key": "langchain.agent",
+                    "value": {
+                        "stringValue": "true"
+                    }
+                }
+            ]
+        },
+        {
+            "spanId": "span-006",
+            "parentSpanId": "span-005",
+            "name": "Claude Call",
+            "startTimeUnixNano": 1707000000550000000,
+            "endTimeUnixNano": 1707000000850000000,
+            "attributes": [
+                {
+                    "key": "anthropic.messages",
+                    "value": {
+                        "stringValue": "claude-3"
+                    }
+                }
+            ]
+        },
+        {
+            "spanId": "span-007",
+            "parentSpanId": "span-001",
+            "name": "Final Output",
+            "startTimeUnixNano": 1707000000900000000,
+            "endTimeUnixNano": 1707000000950000000,
+            "attributes": [
+                {
+                    "key": "output",
+                    "value": {
+                        "stringValue": "true"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,242 @@
+"""
+Dissect 2.0 - HTML Exporter
+
+Export OrchestrationGraph to interactive HTML visualization.
+Uses embedded JavaScript for interactivity (no external dependencies).
+"""
+
+from ..graph import OrchestrationGraph, NodeType
+import json
+
+
+HTML_TEMPLATE = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dissect - {title}</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+        }}
+        header {{
+            background: rgba(0,0,0,0.3);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }}
+        header h1 {{ font-size: 1.5rem; font-weight: 500; }}
+        header h1 span {{ color: #00d4ff; }}
+        .container {{ display: flex; height: calc(100vh - 60px); }}
+        #graph-container {{ flex: 1; position: relative; overflow: hidden; }}
+        #sidebar {{
+            width: 320px;
+            background: rgba(0,0,0,0.3);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            padding: 1rem;
+            overflow-y: auto;
+        }}
+        .node {{
+            position: absolute;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 120px;
+            text-align: center;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }}
+        .node:hover {{
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }}
+        .node.selected {{ outline: 3px solid #00d4ff; }}
+        .node-agent {{ background: linear-gradient(135deg, #4fc3f7, #29b6f6); color: #000; }}
+        .node-tool {{ background: linear-gradient(135deg, #ffb74d, #ffa726); color: #000; }}
+        .node-llm_call {{ background: linear-gradient(135deg, #ba68c8, #ab47bc); color: #fff; }}
+        .node-user_input {{ background: linear-gradient(135deg, #81c784, #66bb6a); color: #000; }}
+        .node-output {{ background: linear-gradient(135deg, #e57373, #ef5350); color: #fff; }}
+        .node-unknown {{ background: linear-gradient(135deg, #90a4ae, #78909c); color: #fff; }}
+        .node .duration {{ font-size: 0.75rem; opacity: 0.8; margin-top: 4px; }}
+        svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }}
+        svg line {{ stroke: rgba(255,255,255,0.4); stroke-width: 2; }}
+        svg line.critical {{ stroke: #00d4ff; stroke-width: 3; }}
+        .info-panel h3 {{ margin-bottom: 1rem; color: #00d4ff; }}
+        .info-item {{ margin-bottom: 0.75rem; }}
+        .info-item label {{ font-size: 0.75rem; color: #888; display: block; }}
+        .info-item span {{ font-size: 0.9rem; }}
+        .legend {{ margin-top: 2rem; }}
+        .legend-item {{ display: flex; align-items: center; margin-bottom: 0.5rem; }}
+        .legend-color {{ width: 16px; height: 16px; border-radius: 4px; margin-right: 8px; }}
+    </style>
+</head>
+<body>
+    <header>
+        <h1><span>Dissect</span> Orchestration Visualizer</h1>
+    </header>
+    <div class="container">
+        <div id="graph-container">
+            <svg id="edges"></svg>
+        </div>
+        <div id="sidebar">
+            <div class="info-panel">
+                <h3>Workflow Info</h3>
+                <div class="info-item">
+                    <label>Name</label>
+                    <span id="info-name">{title}</span>
+                </div>
+                <div class="info-item">
+                    <label>Nodes</label>
+                    <span id="info-nodes">{node_count}</span>
+                </div>
+                <div class="info-item">
+                    <label>Critical Path Duration</label>
+                    <span id="info-duration">{critical_duration}ms</span>
+                </div>
+            </div>
+            <div id="node-details" style="display:none; margin-top: 2rem;">
+                <h3>Selected Node</h3>
+                <div class="info-item">
+                    <label>Name</label>
+                    <span id="detail-name">-</span>
+                </div>
+                <div class="info-item">
+                    <label>Type</label>
+                    <span id="detail-type">-</span>
+                </div>
+                <div class="info-item">
+                    <label>Duration</label>
+                    <span id="detail-duration">-</span>
+                </div>
+            </div>
+            <div class="legend">
+                <h3>Legend</h3>
+                <div class="legend-item"><div class="legend-color" style="background:#4fc3f7"></div>Agent</div>
+                <div class="legend-item"><div class="legend-color" style="background:#ffb74d"></div>Tool</div>
+                <div class="legend-item"><div class="legend-color" style="background:#ba68c8"></div>LLM Call</div>
+                <div class="legend-item"><div class="legend-color" style="background:#81c784"></div>User Input</div>
+                <div class="legend-item"><div class="legend-color" style="background:#e57373"></div>Output</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const graphData = {graph_json};
+        const container = document.getElementById('graph-container');
+        const svg = document.getElementById('edges');
+        
+        // Layout nodes in a tree structure
+        function layoutNodes(nodes, edges) {{
+            const levels = {{}};
+            const nodeMap = {{}};
+            nodes.forEach(n => nodeMap[n.id] = n);
+            
+            // Find roots (no incoming edges)
+            const targets = new Set(edges.map(e => e.target));
+            const roots = nodes.filter(n => !targets.has(n.id));
+            
+            // BFS to assign levels
+            const queue = roots.map(r => ({{ id: r.id, level: 0 }}));
+            const visited = new Set();
+            
+            while (queue.length > 0) {{
+                const {{ id, level }} = queue.shift();
+                if (visited.has(id)) continue;
+                visited.add(id);
+                
+                if (!levels[level]) levels[level] = [];
+                levels[level].push(id);
+                
+                edges.filter(e => e.source === id).forEach(e => {{
+                    queue.push({{ id: e.target, level: level + 1 }});
+                }});
+            }}
+            
+            // Position nodes
+            const positions = {{}};
+            const levelHeight = 100;
+            Object.entries(levels).forEach(([level, nodeIds]) => {{
+                const levelWidth = container.offsetWidth - 400;
+                const spacing = levelWidth / (nodeIds.length + 1);
+                nodeIds.forEach((id, i) => {{
+                    positions[id] = {{
+                        x: spacing * (i + 1),
+                        y: 50 + parseInt(level) * levelHeight
+                    }};
+                }});
+            }});
+            
+            return positions;
+        }}
+        
+        // Render
+        const positions = layoutNodes(graphData.nodes, graphData.edges);
+        
+        graphData.nodes.forEach(node => {{
+            const pos = positions[node.id] || {{ x: 100, y: 100 }};
+            const div = document.createElement('div');
+            div.className = `node node-${{node.type}}`;
+            div.style.left = pos.x + 'px';
+            div.style.top = pos.y + 'px';
+            div.innerHTML = `<div class="name">${{node.name}}</div>` +
+                (node.duration_ms ? `<div class="duration">${{node.duration_ms.toFixed(0)}}ms</div>` : '');
+            div.onclick = () => {{
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+                div.classList.add('selected');
+                document.getElementById('node-details').style.display = 'block';
+                document.getElementById('detail-name').textContent = node.name;
+                document.getElementById('detail-type').textContent = node.type;
+                document.getElementById('detail-duration').textContent = node.duration_ms ? node.duration_ms.toFixed(0) + 'ms' : '-';
+            }};
+            container.appendChild(div);
+        }});
+        
+        graphData.edges.forEach(edge => {{
+            const sourcePos = positions[edge.source];
+            const targetPos = positions[edge.target];
+            if (sourcePos && targetPos) {{
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', sourcePos.x + 60);
+                line.setAttribute('y1', sourcePos.y + 40);
+                line.setAttribute('x2', targetPos.x + 60);
+                line.setAttribute('y2', targetPos.y);
+                svg.appendChild(line);
+            }}
+        }});
+    </script>
+</body>
+</html>'''
+
+
+def export_html(graph: OrchestrationGraph) -> str:
+    """
+    Export graph to interactive HTML.
+    
+    Returns:
+        HTML string with embedded visualization.
+    """
+    # Calculate critical path duration
+    critical_path = graph.get_critical_path()
+    critical_duration = sum(n.duration_ms or 0 for n in critical_path)
+    
+    # Prepare JSON data
+    graph_json = graph.to_json()
+    
+    html = HTML_TEMPLATE.format(
+        title=graph.name,
+        node_count=len(graph.nodes),
+        critical_duration=f"{critical_duration:.0f}",
+        graph_json=graph_json
+    )
+    
+    return html
+
+
+def save_html(graph: OrchestrationGraph, file_path: str) -> None:
+    """Save graph as HTML file."""
+    content = export_html(graph)
+    with open(file_path, "w") as f:
+        f.write(content)

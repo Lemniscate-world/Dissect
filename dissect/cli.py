@@ -1,85 +1,146 @@
-import argparse
-from .parser import CodeParser
-from .detectors.quicksort import detect_quicksort
-from .viz import FlowVisualizer
-from .detectors.bfs import detect_bfs
-from .detectors.dfs import detect_dfs
-from .detectors.mergesort import detect_mergesort
-from .detectors.binary_search import detect_binary_search
-from .scanner import AlgorithmScanner
-import json
+"""
+Dissect 2.0 - CLI
 
-def map_command(args):
-    print(f"Scanning directory: {args.dir}")
-    scanner = AlgorithmScanner()
-    inventory = scanner.scan_directory(args.dir)
+Command-line interface for the Orchestration Visualizer.
+"""
+
+import argparse
+import sys
+from .trace_receiver import parse_trace_file
+from .exporters.mermaid import export_mermaid, save_mermaid
+from .exporters.dot import export_dot, save_dot
+from .exporters.html import export_html, save_html
+
+
+def trace_command(args):
+    """Parse a trace file and display summary."""
+    print(f"Parsing trace file: {args.file}")
     
-    with open(args.output, 'w') as f:
-        json.dump(inventory, f, indent=2)
+    try:
+        graph = parse_trace_file(args.file)
+    except FileNotFoundError:
+        print(f"Error: File not found: {args.file}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error parsing trace: {e}")
+        sys.exit(1)
     
-    print(f"Scan complete. Found {inventory['meta']['algorithms_found']} algorithms in {inventory['meta']['total_files']} files.")
-    print(f"Inventory saved to {args.output}")
+    print(f"\n✓ Parsed successfully!")
+    print(f"  Name: {graph.name}")
+    print(f"  Nodes: {len(graph.nodes)}")
+    print(f"  Edges: {len(graph.edges)}")
+    
+    # Show critical path
+    critical_path = graph.get_critical_path()
+    if critical_path:
+        total_duration = sum(n.duration_ms or 0 for n in critical_path)
+        print(f"\n  Critical Path ({total_duration:.0f}ms):")
+        for node in critical_path:
+            duration = f"({node.duration_ms:.0f}ms)" if node.duration_ms else ""
+            print(f"    → {node.name} {duration}")
+
 
 def visualize_command(args):
-    parser = CodeParser()
-    tree = parser.parse_file(args.file)
-    code = open(args.file, "rb").read()
+    """Generate visualization from trace file."""
+    print(f"Parsing trace file: {args.file}")
     
-    visualizer = FlowVisualizer()
+    try:
+        graph = parse_trace_file(args.file)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
     
-    # Detect algorithms
-    for node in tree.root_node.children:
-        if node.type == "function_definition":
-            func_name = node.child_by_field_name("name").text.decode()
-            print(f"Analyzing function: {func_name}")  # Debug output
-            # Detect quicksort
-            qs_result = detect_quicksort(node, code)
-            if qs_result["is_quicksort"]:
-                visualizer.add_algorithm("Quicksort", qs_result["confidence"], "sorting")
-            # Add to the detection loop:
-            bfs_result = detect_bfs(node, code)
-            if bfs_result["is_bfs"]:
-                visualizer.add_algorithm("BFS", bfs_result["confidence"], "graph")
+    output_file = args.output
+    format_type = args.format.lower()
+    
+    if format_type == "mermaid":
+        if not output_file.endswith(".md"):
+            output_file = f"{output_file}.md"
+        save_mermaid(graph, output_file)
+        print(f"✓ Mermaid diagram saved to: {output_file}")
+        
+    elif format_type == "dot":
+        if not output_file.endswith(".dot"):
+            output_file = f"{output_file}.dot"
+        save_dot(graph, output_file)
+        print(f"✓ DOT diagram saved to: {output_file}")
+        
+    elif format_type == "html":
+        if not output_file.endswith(".html"):
+            output_file = f"{output_file}.html"
+        save_html(graph, output_file)
+        print(f"✓ Interactive HTML saved to: {output_file}")
+        
+    elif format_type == "json":
+        if not output_file.endswith(".json"):
+            output_file = f"{output_file}.json"
+        with open(output_file, "w") as f:
+            f.write(graph.to_json())
+        print(f"✓ JSON saved to: {output_file}")
+        
+    else:
+        print(f"Unknown format: {format_type}")
+        print("Supported formats: mermaid, dot, html, json")
+        sys.exit(1)
 
-            dfs_result = detect_dfs(node, code)
-            if dfs_result["is_dfs"]:
-                visualizer.add_algorithm("DFS", dfs_result["confidence"], "graph")
 
-            ms_result = detect_mergesort(node, code)
-            if ms_result["is_mergesort"]:
-                visualizer.add_algorithm("Mergesort", ms_result["confidence"], "sorting")
+def serve_command(args):
+    """Start a local server for real-time trace viewing."""
+    print("Starting Dissect server...")
+    print(f"  Port: {args.port}")
+    print(f"  Open: http://localhost:{args.port}")
+    print("\nNote: Real-time server not yet implemented.")
+    print("Use 'dissect visualize' to generate static visualizations.")
 
-            bs_result = detect_binary_search(node, code)
-            if bs_result["is_binary_search"]:
-                visualizer.add_algorithm("Binary Search", bs_result["confidence"], "search")
-
-    visualizer.render(args.output)
 
 def main():
-    parser = argparse.ArgumentParser(description='Dissect: Algorithm Detective')
-    subparsers = parser.add_subparsers()
+    parser = argparse.ArgumentParser(
+        prog='dissect',
+        description='Dissect 2.0 - Orchestration Visualizer for AI Agent Workflows'
+    )
+    subparsers = parser.add_subparsers(title='commands', dest='command')
     
-    # Visualization command
-    viz_parser = subparsers.add_parser('visualize')
-    viz_parser.add_argument('--file', required=True)
-    viz_parser.add_argument('--output', default="flowchart")
+    # Trace command
+    trace_parser = subparsers.add_parser(
+        'trace',
+        help='Parse and inspect a trace file'
+    )
+    trace_parser.add_argument('--file', '-f', required=True, help='Path to trace file (JSON)')
+    trace_parser.set_defaults(func=trace_command)
+    
+    # Visualize command
+    viz_parser = subparsers.add_parser(
+        'visualize',
+        help='Generate visualization from trace'
+    )
+    viz_parser.add_argument('--file', '-f', required=True, help='Path to trace file (JSON)')
+    viz_parser.add_argument('--format', '-t', default='html', 
+                           choices=['html', 'mermaid', 'dot', 'json'],
+                           help='Output format (default: html)')
+    viz_parser.add_argument('--output', '-o', default='workflow',
+                           help='Output file path (default: workflow)')
     viz_parser.set_defaults(func=visualize_command)
-
-    # Analyze command
-    analyze_parser = subparsers.add_parser('analyze')
-    analyze_parser.add_argument('--file', required=True)
-    analyze_parser.set_defaults(func=lambda args: print(f"Analyzing file: {args.file}"))  # Placeholder for actual analysis logic
-
-    # Map command
-    map_parser = subparsers.add_parser('map')
-    map_parser.add_argument('--dir', default='.')
-    map_parser.add_argument('--output', default='dissect-map.json')
-    map_parser.set_defaults(func=map_command)
-
-    # Parse command-line arguments and execute the corresponding function
+    
+    # Serve command (placeholder)
+    serve_parser = subparsers.add_parser(
+        'serve',
+        help='Start local server for real-time visualization'
+    )
+    serve_parser.add_argument('--port', '-p', type=int, default=8080,
+                             help='Port to listen on (default: 8080)')
+    serve_parser.set_defaults(func=serve_command)
+    
+    # Version
+    parser.add_argument('--version', '-v', action='version', version='Dissect 2.0.0')
     
     args = parser.parse_args()
+    
+    if args.command is None:
+        parser.print_help()
+        sys.exit(0)
+    
     args.func(args)
+
 
 if __name__ == "__main__":
     main()
