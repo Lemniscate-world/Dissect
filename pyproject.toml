@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "C90", "B", "PL"]
+ignore = ["PLR2004"] # Magic values comparison
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.pylint.messages_control]
+disable = [
+    "C0114", # Missing module docstring
+    "C0115", # Missing class docstring
+    "C0116", # Missing function docstring
+    "R0903", # Too few public methods
+]

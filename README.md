@@ -1,62 +1,124 @@
-# Dissect - Algorithm Detective 🔍
+# Dissect
 
-[![CI/CD](https://github.com/Lemniscate-SHA-256/dissect/actions/workflows/ci.yml/badge.svg)](https://github.com/Lemniscate-SHA-256/dissect/actions)
-[![Coverage](https://codecov.io/gh/Lemniscate-SHA-256/dissect/branch/main/graph/badge.svg)](https://codecov.io/gh/Lemniscate-SHA-256/dissect)
+> **Visualize AI Agent Workflows** | LangChain • CrewAI • AutoGen • OpenTelemetry
 
-**Automatically detect, analyze, and visualize algorithms in codebases**
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9+-green.svg)](https://python.org)
+[![Coverage](https://img.shields.io/badge/coverage-66%25-brightgreen.svg)](tests/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![AI Powered](https://img.shields.io/badge/AI-Powered-purple.svg)](https://github.com/Lemniscate-world/Dissect)
 
----
+Dissect helps you understand what's happening inside your AI agent systems. Parse traces, visualize workflows, and identify bottlenecks.
 
-## Overview
-Dissect scans your code to:
-- 🔎 **Identify algorithms** (sorting, graph traversal, etc.)
-- 📊 **Analyze complexity** (time/space Big-O notation)
-- 🎨 **Generate visualizations** (Netron-like flowcharts)
-- **Category-Driven Visualization**  
-  Algorithms are color-coded by type (sorting=red, graph=blue)
-
-![flowchart](https://github.com/user-attachments/assets/310a4051-c8f9-4d20-bbbc-0916de4faa8a)
-
+![Dissect Visualization](/home/kuro/.gemini/antigravity/brain/aa252a15-bec2-4bd2-a6ff-37bd01849699/dissect_v2_demo_1770657475382.png)
 
 ## Features
-- **Multi-Language Support**: Python, JavaScript, Java (more coming)
-- **Algorithm Taxonomy**: Categorizes implementations into hierarchies
-- **Educational Annotations**: Explains algorithm logic in context
-- **CI/CD Ready**: Integrates with GitHub Actions
 
-## Installation
+- 🔌 **Multi-Framework Support** – Works with LangChain, CrewAI, AutoGen, and any OpenTelemetry-compatible system
+- 📊 **Beautiful Visualizations** – Interactive HTML, Mermaid diagrams, Graphviz DOT
+- ⏱️ **Critical Path Analysis** – Identify the slowest paths in your workflows
+- 🚀 **Zero Config** – Auto-detects trace formats
+
+## Quick Start
+
 ```bash
+# Install
 pip install dissect
+
+# Parse a trace file
+dissect trace --file trace.json
+
+# Generate interactive HTML visualization
+dissect visualize --file trace.json --format html --output workflow.html
+
+# Generate Mermaid diagram
+dissect visualize --file trace.json --format mermaid --output workflow.md
 ```
 
-## Usage
-**Basic Detection**:
+## Example Output
+
+```
+✓ Parsed successfully!
+  Name: Trace
+  Nodes: 7
+  Edges: 6
+
+  Critical Path (750ms):
+    → User Query (50ms)
+    → Writer Agent (400ms)
+    → Claude Call (300ms)
+```
+
+## Supported Trace Formats
+
+| Format | Auto-Detected By |
+|--------|------------------|
+| OpenTelemetry | `spans` or `resourceSpans` field |
+| LangChain | `runs` or `run_type` field |
+| CrewAI | `crew_name`, `agents` + `tasks` |
+| AutoGen | `agents` + `messages` |
+
+## Visualization Formats
+
+| Format | Command | Use Case |
+|--------|---------|----------|
+| HTML | `--format html` | Interactive exploration |
+| Mermaid | `--format mermaid` | Documentation, GitHub |
+| DOT | `--format dot` | Graphviz rendering |
+| JSON | `--format json` | Programmatic access |
+
+## Development
+
 ```bash
-dissect analyze --file ./src/sorting.py
+# Clone
+git clone https://github.com/Lemniscate-world/Dissect.git
+cd Dissect
 
-# Output:
-# [✓] quicksort (sorting) - Confidence: 92%
-# [✓] bfs (graph) - Confidence: 85%
+# Install in dev mode
+pip install -e .
+
+# Run tests
+python -m pytest
 ```
 
-**Visualization**:
-```bash
-dissect visualize --file ./src/graph.py --output architecture
-# Saves architecture.png
+## Roadmap
+
+- [x] Multi-framework trace parsing
+- [x] HTML/Mermaid/DOT export
+- [x] Critical path analysis
+- [x] 🌡️ Latency Heatmaps (Bottleneck detection)
+- [x] `dissect explain` (AI-powered insights)
+- [ ] `dissect watch` (Live trace streaming)
+- [ ] VS Code extension
+- [ ] Dissect Cloud (hosted dashboard)
+
+## Architecture
+
+### Class Diagram
+![Class Diagram](docs/architecture/classes.png)
+
+### Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant Parser
+    participant Graph
+    participant Exporter
+    
+    User->>CLI: dissect trace file.json
+    CLI->>Parser: parse_trace_file(path)
+    Parser->>Parser: Auto-detect format
+    Parser->>Graph: Create Nodes & Edges
+    Graph-->>CLI: OrchestrationGraph
+    CLI->>Exporter: export(graph, format='html')
+    Exporter-->>User: workflow.html
 ```
-
-## Contributing
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to branch (`git push origin feat/amazing-feature`)
-5. Open a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-https://discord.gg/ZJz3tT5r
 
 ## License
-Distributed under the MIT License. See `LICENSE` for more information.
+
+Apache 2.0 – see [LICENSE](LICENSE)
 
 ---
-**Dissect** - Because great code deserves to be understood. 🧠
+
+Built with ❤️ by [Lemniscate World](https://github.com/Lemniscate-world)

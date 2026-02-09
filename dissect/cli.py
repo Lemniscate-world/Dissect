@@ -10,6 +10,27 @@ from .trace_receiver import parse_trace_file
 from .exporters.mermaid import export_mermaid, save_mermaid
 from .exporters.dot import export_dot, save_dot
 from .exporters.html import export_html, save_html
+from .explain import explain_graph
+
+
+def explain_command(args):
+    """Generate AI summary of the trace."""
+    print(f"Parsing trace file: {args.file}")
+    
+    try:
+        graph = parse_trace_file(args.file)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+        
+    print(f"Generating insights using {args.provider}...")
+    summary = explain_graph(graph, provider=args.provider, model=args.model)
+    
+    print("\n" + "="*40)
+    print(" DISSECT AI INSIGHTS")
+    print("="*40 + "\n")
+    print(summary)
+    print("\n" + "="*40)
 
 
 def trace_command(args):
@@ -129,6 +150,18 @@ def main():
     serve_parser.add_argument('--port', '-p', type=int, default=8080,
                              help='Port to listen on (default: 8080)')
     serve_parser.set_defaults(func=serve_command)
+    
+    # Explain command
+    explain_parser = subparsers.add_parser(
+        'explain',
+        help='Generate AI-powered insights from trace'
+    )
+    explain_parser.add_argument('--file', '-f', required=True, help='Path to trace file (JSON)')
+    explain_parser.add_argument('--provider', '-p', default='openai', 
+                               choices=['openai', 'ollama'],
+                               help='AI provider (default: openai)')
+    explain_parser.add_argument('--model', '-m', help='Model name to use')
+    explain_parser.set_defaults(func=explain_command)
     
     # Version
     parser.add_argument('--version', '-v', action='version', version='Dissect 2.0.0')

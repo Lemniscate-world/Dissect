@@ -1,0 +1,62 @@
+{
+    "name": "Code Review Conversation",
+    "agents": [
+        {
+            "name": "Developer",
+            "type": "AssistantAgent",
+            "system_message": "You are a helpful developer."
+        },
+        {
+            "name": "Reviewer",
+            "type": "AssistantAgent",
+            "system_message": "You are a code reviewer."
+        }
+    ],
+    "messages": [
+        {
+            "message_id": "msg-001",
+            "sender": "Developer",
+            "role": "user",
+            "content": "Can you review this function?",
+            "timestamp": "2026-02-09T10:00:00Z"
+        },
+        {
+            "message_id": "msg-002",
+            "sender": "Reviewer",
+            "role": "assistant",
+            "content": "Let me analyze the code structure...",
+            "timestamp": "2026-02-09T10:00:05Z"
+        },
+        {
+            "message_id": "msg-003",
+            "sender": "Reviewer",
+            "role": "assistant",
+            "content": "I'll use a tool to check complexity",
+            "timestamp": "2026-02-09T10:00:10Z",
+            "tool_calls": [
+                {
+                    "id": "tool-001",
+                    "name": "analyze_complexity",
+                    "arguments": "{\"code\": \"def example(): pass\"}",
+                    "start_time": "2026-02-09T10:00:11Z",
+                    "end_time": "2026-02-09T10:00:12Z",
+                    "result": "Complexity: O(1)"
+                }
+            ]
+        },
+        {
+            "message_id": "msg-004",
+            "sender": "Reviewer",
+            "role": "assistant",
+            "content": "The code looks good. Complexity is O(1).",
+            "timestamp": "2026-02-09T10:00:15Z"
+        },
+        {
+            "message_id": "msg-005",
+            "sender": "Developer",
+            "role": "user",
+            "content": "Thanks for the review!",
+            "timestamp": "2026-02-09T10:00:20Z"
+        }
+    ]
+}

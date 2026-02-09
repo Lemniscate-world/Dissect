@@ -1,0 +1,16 @@
+
+sequenceDiagram
+    participant User
+    participant CLI
+    participant Parser
+    participant Graph
+    participant Exporter
+    
+    User->>CLI: dissect trace file.json
+    CLI->>Parser: parse_trace_file(path)
+    Parser->>Parser: Auto-detect format
+    Parser->>Graph: Create Nodes & Edges
+    Graph-->>CLI: OrchestrationGraph
+    CLI->>Exporter: export(graph, format='html')
+    Exporter-->>User: workflow.html
+    

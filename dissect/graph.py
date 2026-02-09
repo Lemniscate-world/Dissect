@@ -33,7 +33,7 @@ class Node:
     
     @property
     def duration_ms(self) -> Optional[float]:
-        if self.start_time and self.end_time:
+        if self.start_time is not None and self.end_time is not None:
             return (self.end_time - self.start_time) * 1000
         return None
 
@@ -140,20 +140,37 @@ class OrchestrationGraph:
     
     def to_dict(self) -> Dict[str, Any]:
         """Serialize graph to dictionary."""
+        # Calculate heat scores (0.0 - 1.0) based on duration
+        durations = [n.duration_ms for n in self.nodes.values() if n.duration_ms is not None]
+        max_duration = max(durations) if durations else 0
+        min_duration = min(durations) if durations else 0
+        duration_range = max_duration - min_duration
+
+        nodes_list = []
+        for n in self.nodes.values():
+            heat_score = 0.0
+            if n.duration_ms is not None and duration_range > 0:
+                heat_score = (n.duration_ms - min_duration) / duration_range
+            elif n.duration_ms is not None and max_duration > 0:
+                 # If all durations are equal and > 0, treat as max heat? Or min? 
+                 # Usually 0 or 0.5. Let's say 0.
+                 heat_score = 0.0
+            
+            node_dict = {
+                "id": n.id,
+                "name": n.name,
+                "type": n.node_type.value,
+                "start_time": n.start_time,
+                "end_time": n.end_time,
+                "duration_ms": n.duration_ms,
+                "heat_score": heat_score,
+                "metadata": n.metadata
+            }
+            nodes_list.append(node_dict)
+
         return {
             "name": self.name,
-            "nodes": [
-                {
-                    "id": n.id,
-                    "name": n.name,
-                    "type": n.node_type.value,
-                    "start_time": n.start_time,
-                    "end_time": n.end_time,
-                    "duration_ms": n.duration_ms,
-                    "metadata": n.metadata
-                }
-                for n in self.nodes.values()
-            ],
+            "nodes": nodes_list,
             "edges": [
                 {
                     "source": e.source_id,

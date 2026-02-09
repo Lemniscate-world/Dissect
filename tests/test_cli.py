@@ -1,0 +1,77 @@
+"""
+Tests for CLI
+"""
+
+import unittest
+from unittest.mock import patch, MagicMock
+import argparse
+import sys
+from dissect.cli import main, trace_command, visualize_command, serve_command
+
+class TestCLI(unittest.TestCase):
+    
+    @patch('argparse.ArgumentParser.parse_args')
+    @patch('dissect.cli.trace_command')
+    def test_main_trace(self, mock_trace, mock_args):
+        """Test that trace command is routed correctly."""
+        mock_args.return_value = argparse.Namespace(func=mock_trace, command='trace', file='trace.json')
+        main()
+        mock_trace.assert_called_once()
+
+    @patch('dissect.cli.parse_trace_file')
+    @patch('builtins.print')
+    def test_trace_command(self, mock_print, mock_parse):
+        """Test trace command execution."""
+        mock_graph = MagicMock()
+        mock_graph.name = "Test Graph"
+        mock_graph.nodes = [1, 2]
+        mock_graph.edges = [1]
+        mock_graph.get_critical_path.return_value = []
+        mock_parse.return_value = mock_graph
+        
+        args = argparse.Namespace(file='trace.json')
+        trace_command(args)
+        
+        mock_parse.assert_called_with('trace.json')
+        # Check that we printed something
+        self.assertTrue(mock_print.call_count > 0)
+        
+    @patch('dissect.cli.parse_trace_file')
+    @patch('dissect.cli.save_html')
+    @patch('builtins.print')
+    def test_visualize_command_html(self, mock_print, mock_save_html, mock_parse):
+        """Test visualize command for HTML output."""
+        mock_graph = MagicMock()
+        mock_parse.return_value = mock_graph
+        
+        args = argparse.Namespace(file='trace.json', format='html', output='out')
+        visualize_command(args)
+        
+        mock_save_html.assert_called_with(mock_graph, 'out.html')
+
+    @patch('builtins.print')
+    def test_serve_command(self, mock_print):
+        """Test serve command (placeholder)."""
+        args = argparse.Namespace(port=9090)
+        serve_command(args)
+        mock_print.assert_called()
+
+    @patch('dissect.cli.explain_graph')
+    @patch('dissect.cli.parse_trace_file')
+    def test_explain_command(self, mock_parse, mock_explain):
+        mock_explain.return_value = "AI Insight"
+        args = MagicMock()
+        args.file = "test.json"
+        args.provider = "openai"
+        args.model = None
+        
+        from dissect.cli import explain_command
+        with patch('builtins.print'):
+            explain_command(args)
+            
+        mock_parse.assert_called_once_with("test.json")
+        mock_explain.assert_called_once()
+
+
+if __name__ == '__main__':
+    unittest.main()

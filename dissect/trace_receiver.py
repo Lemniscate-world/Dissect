@@ -218,9 +218,264 @@ class LangChainParser(TraceParser):
         return None
 
 
+class CrewAIParser(TraceParser):
+    """
+    Parse CrewAI-specific trace format.
+    
+    CrewAI traces typically contain crew, agents, and tasks.
+    """
+    
+    def parse(self, trace_data: Dict[str, Any]) -> OrchestrationGraph:
+        """Parse CrewAI trace into graph."""
+        crew_name = trace_data.get("crew_name", trace_data.get("name", "CrewAI Workflow"))
+        graph = OrchestrationGraph(name=crew_name)
+        
+        # CrewAI structure: crew -> agents -> tasks
+        crew_id = trace_data.get("crew_id", "crew-root")
+        
+        # Add crew as root node
+        crew_node = Node(
+            id=crew_id,
+            name=crew_name,
+            node_type=NodeType.AGENT,
+            start_time=self._parse_timestamp(trace_data.get("start_time")),
+            end_time=self._parse_timestamp(trace_data.get("end_time")),
+            metadata={"type": "crew"}
+        )
+        graph.add_node(crew_node)
+        
+        # Process agents
+        for agent in trace_data.get("agents", []):
+            self._process_agent(agent, graph, parent_id=crew_id)
+        
+        # Process tasks (connected to crew)
+        for task in trace_data.get("tasks", []):
+            self._process_task(task, graph, parent_id=crew_id)
+        
+        # Process execution trace if available
+        for step in trace_data.get("execution_trace", []):
+            self._process_step(step, graph, parent_id=crew_id)
+        
+        return graph
+    
+    def _process_agent(self, agent: Dict[str, Any], graph: OrchestrationGraph, parent_id: str):
+        """Process a CrewAI agent."""
+        agent_id = agent.get("agent_id", agent.get("id", f"agent-{len(graph.nodes)}"))
+        
+        node = Node(
+            id=agent_id,
+            name=agent.get("role", agent.get("name", "Agent")),
+            node_type=NodeType.AGENT,
+            start_time=self._parse_timestamp(agent.get("start_time")),
+            end_time=self._parse_timestamp(agent.get("end_time")),
+            metadata={
+                "goal": agent.get("goal"),
+                "backstory": agent.get("backstory"),
+                "tools": agent.get("tools", [])
+            }
+        )
+        graph.add_node(node)
+        graph.add_edge(Edge(source_id=parent_id, target_id=agent_id))
+        
+        # Process tool calls within agent
+        for tool_call in agent.get("tool_calls", []):
+            self._process_tool_call(tool_call, graph, parent_id=agent_id)
+    
+    def _process_task(self, task: Dict[str, Any], graph: OrchestrationGraph, parent_id: str):
+        """Process a CrewAI task."""
+        task_id = task.get("task_id", task.get("id", f"task-{len(graph.nodes)}"))
+        
+        node = Node(
+            id=task_id,
+            name=task.get("description", task.get("name", "Task"))[:50],
+            node_type=NodeType.AGENT,
+            start_time=self._parse_timestamp(task.get("start_time")),
+            end_time=self._parse_timestamp(task.get("end_time")),
+            metadata={
+                "description": task.get("description"),
+                "expected_output": task.get("expected_output"),
+                "agent": task.get("agent"),
+                "output": task.get("output")
+            }
+        )
+        graph.add_node(node)
+        graph.add_edge(Edge(source_id=parent_id, target_id=task_id))
+    
+    def _process_step(self, step: Dict[str, Any], graph: OrchestrationGraph, parent_id: str):
+        """Process an execution step."""
+        step_id = step.get("step_id", step.get("id", f"step-{len(graph.nodes)}"))
+        step_type = step.get("type", "unknown")
+        
+        type_mapping = {
+            "agent_execution": NodeType.AGENT,
+            "tool_call": NodeType.TOOL,
+            "llm_call": NodeType.LLM_CALL,
+        }
+        
+        node = Node(
+            id=step_id,
+            name=step.get("name", step_type),
+            node_type=type_mapping.get(step_type, NodeType.UNKNOWN),
+            start_time=self._parse_timestamp(step.get("start_time")),
+            end_time=self._parse_timestamp(step.get("end_time")),
+            metadata=step.get("metadata", {})
+        )
+        graph.add_node(node)
+        
+        # Connect to previous step or parent
+        prev_id = step.get("parent_id", parent_id)
+        graph.add_edge(Edge(source_id=prev_id, target_id=step_id))
+    
+    def _process_tool_call(self, tool: Dict[str, Any], graph: OrchestrationGraph, parent_id: str):
+        """Process a tool call."""
+        tool_id = tool.get("tool_id", tool.get("id", f"tool-{len(graph.nodes)}"))
+        
+        node = Node(
+            id=tool_id,
+            name=tool.get("tool_name", tool.get("name", "Tool")),
+            node_type=NodeType.TOOL,
+            start_time=self._parse_timestamp(tool.get("start_time")),
+            end_time=self._parse_timestamp(tool.get("end_time")),
+            metadata={
+                "input": tool.get("input"),
+                "output": tool.get("output")
+            }
+        )
+        graph.add_node(node)
+        graph.add_edge(Edge(source_id=parent_id, target_id=tool_id))
+    
+    def _parse_timestamp(self, ts: Any) -> Optional[float]:
+        """Parse timestamp to Unix seconds."""
+        if ts is None:
+            return None
+        if isinstance(ts, (int, float)):
+            if ts > 1e10:
+                return ts / 1000
+            return ts
+        if isinstance(ts, str):
+            from datetime import datetime
+            try:
+                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                return dt.timestamp()
+            except:
+                return None
+        return None
+
+
+class AutoGenParser(TraceParser):
+    """
+    Parse AutoGen-specific trace format.
+    
+    AutoGen traces contain conversations between agents.
+    """
+    
+    def parse(self, trace_data: Dict[str, Any]) -> OrchestrationGraph:
+        """Parse AutoGen trace into graph."""
+        graph = OrchestrationGraph(name=trace_data.get("name", "AutoGen Conversation"))
+        
+        # AutoGen structure: agents + messages/conversation
+        # First, add all agents as nodes
+        agent_ids = {}
+        for i, agent in enumerate(trace_data.get("agents", [])):
+            agent_id = agent.get("agent_id", agent.get("name", f"agent-{i}"))
+            agent_ids[agent.get("name", agent_id)] = agent_id
+            
+            node = Node(
+                id=agent_id,
+                name=agent.get("name", "Agent"),
+                node_type=NodeType.AGENT,
+                metadata={
+                    "type": agent.get("type", "agent"),
+                    "system_message": agent.get("system_message")
+                }
+            )
+            graph.add_node(node)
+        
+        # Process conversation/messages as edges between agents
+        prev_node_id = None
+        for i, msg in enumerate(trace_data.get("messages", trace_data.get("conversation", []))):
+            msg_id = msg.get("message_id", f"msg-{i}")
+            sender = msg.get("sender", msg.get("name", "unknown"))
+            
+            # Determine node type based on content
+            node_type = NodeType.AGENT
+            if msg.get("function_call") or msg.get("tool_calls"):
+                node_type = NodeType.TOOL
+            elif msg.get("role") == "assistant" and "content" in msg:
+                node_type = NodeType.LLM_CALL
+            
+            node = Node(
+                id=msg_id,
+                name=f"{sender}: {str(msg.get('content', ''))[:30]}...",
+                node_type=node_type,
+                start_time=self._parse_timestamp(msg.get("timestamp")),
+                metadata={
+                    "sender": sender,
+                    "content": msg.get("content"),
+                    "role": msg.get("role")
+                }
+            )
+            graph.add_node(node)
+            
+            # Connect to previous message or sender agent
+            if prev_node_id:
+                graph.add_edge(Edge(source_id=prev_node_id, target_id=msg_id))
+            elif sender in agent_ids:
+                graph.add_edge(Edge(source_id=agent_ids[sender], target_id=msg_id))
+            
+            prev_node_id = msg_id
+            
+            # Process function calls
+            for fc in msg.get("function_calls", msg.get("tool_calls", [])):
+                self._process_function_call(fc, graph, parent_id=msg_id)
+        
+        return graph
+    
+    def _process_function_call(self, fc: Dict[str, Any], graph: OrchestrationGraph, parent_id: str):
+        """Process an AutoGen function call."""
+        fc_id = fc.get("id", f"fc-{len(graph.nodes)}")
+        
+        node = Node(
+            id=fc_id,
+            name=fc.get("name", fc.get("function", {}).get("name", "function")),
+            node_type=NodeType.TOOL,
+            start_time=self._parse_timestamp(fc.get("start_time")),
+            end_time=self._parse_timestamp(fc.get("end_time")),
+            metadata={
+                "arguments": fc.get("arguments", fc.get("function", {}).get("arguments")),
+                "result": fc.get("result")
+            }
+        )
+        graph.add_node(node)
+        graph.add_edge(Edge(source_id=parent_id, target_id=fc_id))
+    
+    def _parse_timestamp(self, ts: Any) -> Optional[float]:
+        """Parse timestamp to Unix seconds."""
+        if ts is None:
+            return None
+        if isinstance(ts, (int, float)):
+            if ts > 1e10:
+                return ts / 1000
+            return ts
+        if isinstance(ts, str):
+            from datetime import datetime
+            try:
+                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                return dt.timestamp()
+            except:
+                return None
+        return None
+
+
 def parse_trace_file(file_path: str) -> OrchestrationGraph:
     """
     Parse a trace file and auto-detect the format.
+    
+    Supported formats:
+    - OpenTelemetry (OTLP JSON)
+    - LangChain (LangSmith exports)
+    - CrewAI (crew execution traces)
+    - AutoGen (conversation traces)
     
     Args:
         file_path: Path to a JSON trace file.
@@ -236,8 +491,13 @@ def parse_trace_file(file_path: str) -> OrchestrationGraph:
         parser = OpenTelemetryParser()
     elif "runs" in data or "run_type" in data:
         parser = LangChainParser()
+    elif "crew_name" in data or "crew_id" in data or ("agents" in data and "tasks" in data):
+        parser = CrewAIParser()
+    elif "messages" in data or "conversation" in data or ("agents" in data and "messages" in data):
+        parser = AutoGenParser()
     else:
         # Default to OpenTelemetry
         parser = OpenTelemetryParser()
     
     return parser.parse(data)
+

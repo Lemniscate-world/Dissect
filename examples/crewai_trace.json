@@ -1,0 +1,47 @@
+{
+    "crew_name": "Research & Writing Crew",
+    "crew_id": "crew-001",
+    "start_time": "2026-02-09T10:00:00Z",
+    "end_time": "2026-02-09T10:05:00Z",
+    "agents": [
+        {
+            "agent_id": "agent-researcher",
+            "role": "Senior Researcher",
+            "goal": "Find accurate information about AI trends",
+            "backstory": "Expert researcher with 10 years experience",
+            "tools": [
+                "web_search",
+                "wikipedia"
+            ]
+        },
+        {
+            "agent_id": "agent-writer",
+            "role": "Technical Writer",
+            "goal": "Write clear and engaging content",
+            "backstory": "Published author and tech blogger",
+            "tools": [
+                "text_editor"
+            ]
+        }
+    ],
+    "tasks": [
+        {
+            "task_id": "task-research",
+            "description": "Research the latest AI agent frameworks",
+            "expected_output": "A summary of top 5 AI agent frameworks",
+            "agent": "Senior Researcher",
+            "start_time": "2026-02-09T10:00:30Z",
+            "end_time": "2026-02-09T10:02:30Z",
+            "output": "Top frameworks: LangChain, CrewAI, AutoGen, Semantic Kernel, DSPy"
+        },
+        {
+            "task_id": "task-write",
+            "description": "Write a blog post about AI agents",
+            "expected_output": "A 500-word blog post",
+            "agent": "Technical Writer",
+            "start_time": "2026-02-09T10:02:30Z",
+            "end_time": "2026-02-09T10:04:30Z",
+            "output": "The Rise of AI Agents: A comprehensive overview..."
+        }
+    ]
+}
