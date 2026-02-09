@@ -5,7 +5,7 @@ sequenceDiagram
     participant Parser
     participant Graph
     participant Exporter
-    
+
     User->>CLI: dissect trace file.json
     CLI->>Parser: parse_trace_file(path)
     Parser->>Parser: Auto-detect format

@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="dissect",
@@ -8,8 +8,6 @@ setup(
         "tree-sitter-languages>=1.5.0"  # Modern API
     ],
     entry_points={
-        'console_scripts': [
-            'dissect=dissect.cli:main'
-        ],
-    }
+        "console_scripts": ["dissect=dissect.cli:main"],
+    },
 )

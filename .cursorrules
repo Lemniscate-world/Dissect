@@ -42,7 +42,7 @@ Your goal is to build a "Boardroom Ready" visualization tool that is framework-a
     - **Logic Tests**: Graph constraints and critical path correctness.
     - **Fuzzy Tests**: Resilience against malformed inputs.
     - **Module Coverage**: Ensure EACH part, EACH module is tested. No exceptions.
-- **Protocol**: 
+- **Protocol**:
     - **Step-by-Step**: Follow the plan. Do not jump ahead.
     - **Phase Verification**: Verify ALL tasks of Phase N are complete before starting Phase N+1.
 - **Naming**: Use `OrchestrationGraph`, `Node`, `Edge`. Do not use framework-specific terms (like "Chain" or "Sequencer") in the core graph model.

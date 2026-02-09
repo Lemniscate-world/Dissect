@@ -1,6 +1,6 @@
 # Dissect Project Instructions (GitHub Copilot)
 
-You are an AI programming assistant working on **Dissect**, an open-source AI orchestration visualization engine. 
+You are an AI programming assistant working on **Dissect**, an open-source AI orchestration visualization engine.
 
 ## 🧠 Core Philosophy
 1.  **Switzerland Positioning**: DO NOT prefer one framework (LangChain/CrewAI/AutoGen) over others. Keep core logic (`graph.py`) pure and independent.
@@ -41,7 +41,7 @@ You are an AI programming assistant working on **Dissect**, an open-source AI or
     - **Logic Tests**: Graph constraints and critical path correctness.
     - **Fuzzy Tests**: Resilience against malformed inputs.
     - **Module Coverage**: Ensure EACH part, EACH module is tested. No exceptions.
-- **Protocol**: 
+- **Protocol**:
     - **Step-by-Step**: Follow the plan. Do not jump ahead.
     - **Phase Verification**: Verify ALL tasks of Phase N are complete before starting Phase N+1.
 - **Naming**: Use `OrchestrationGraph`, `Node`, `Edge`. Avoid framework-specific jargon in core models.

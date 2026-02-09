@@ -5,11 +5,9 @@ Export OrchestrationGraph to interactive HTML visualization.
 Uses embedded JavaScript for interactivity (no external dependencies).
 """
 
-from ..graph import OrchestrationGraph, NodeType
-import json
+from ..graph import OrchestrationGraph
 
-
-HTML_TEMPLATE = '''<!DOCTYPE html>
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -17,7 +15,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
     <title>Dissect - {title}</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
+        body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #eee;
@@ -37,7 +35,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         }}
         header h1 {{ font-size: 1.2rem; font-weight: 500; }}
         header h1 span {{ color: #00d4ff; font-weight: 700; }}
-        
+
         .controls {{ display: flex; gap: 10px; }}
         button {{
             background: rgba(255,255,255,0.1);
@@ -52,27 +50,27 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         button:hover {{ background: rgba(255,255,255,0.2); }}
         button.primary {{ background: #00d4ff; color: #000; border: none; font-weight: 600; }}
         button.primary:hover {{ background: #00b0d4; }}
-        
+
         .container {{ display: flex; height: 100%; position: relative; }}
-        
-        #graph-viewport {{ 
-            flex: 1; 
-            position: relative; 
-            overflow: hidden; 
+
+        #graph-viewport {{
+            flex: 1;
+            position: relative;
+            overflow: hidden;
             cursor: grab;
             background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
             background-size: 20px 20px;
         }}
         #graph-viewport:active {{ cursor: grabbing; }}
-        
-        #graph-content {{ 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
+
+        #graph-content {{
+            position: absolute;
+            top: 0;
+            left: 0;
             transform-origin: 0 0;
             pointer-events: none;
         }}
-        
+
         #sidebar {{
             width: 300px;
             background: rgba(0,0,0,0.3);
@@ -82,7 +80,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             backdrop-filter: blur(10px);
             z-index: 10;
         }}
-        
+
         .node {{
             position: absolute;
             padding: 10px 14px;
@@ -102,37 +100,37 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             box-shadow: 0 8px 20px rgba(0,0,0,0.5);
             z-index: 10;
         }}
-        .node.selected {{ 
-            outline: 2px solid #00d4ff; 
+        .node.selected {{
+            outline: 2px solid #00d4ff;
             box-shadow: 0 0 20px rgba(0,212,255,0.3);
         }}
         .node.dimmed {{ opacity: 0.2; }}
         .node.active {{ box-shadow: 0 0 30px rgba(255,255,255,0.5); transform: scale(1.1); z-index: 20; }}
-        
+
         .node-agent {{ background: linear-gradient(135deg, #0288d1, #01579b); }}
         .node-tool {{ background: linear-gradient(135deg, #f57c00, #e65100); }}
         .node-llm_call {{ background: linear-gradient(135deg, #7b1fa2, #4a148c); }}
         .node-user_input {{ background: linear-gradient(135deg, #388e3c, #1b5e20); }}
         .node-output {{ background: linear-gradient(135deg, #d32f2f, #b71c1c); }}
         .node-unknown {{ background: linear-gradient(135deg, #546e7a, #37474f); }}
-        
+
         .node .name {{ font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }}
         .node .duration {{ font-size: 0.7rem; opacity: 0.7; margin-top: 4px; font-family: monospace; }}
-        
+
         svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }}
-        svg path {{ 
-            stroke: rgba(255,255,255,0.2); 
-            stroke-width: 2; 
-            fill: none; 
+        svg path {{
+            stroke: rgba(255,255,255,0.2);
+            stroke-width: 2;
+            fill: none;
             transition: stroke 0.3s;
         }}
         svg path.active {{ stroke: #00d4ff; stroke-width: 3; filter: drop-shadow(0 0 5px #00d4ff); }}
-        
+
         .info-panel h3 {{ margin-bottom: 1rem; color: #00d4ff; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }}
         .info-item {{ margin-bottom: 1rem; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; }}
         .info-item label {{ font-size: 0.7rem; color: #888; display: block; margin-bottom: 4px; }}
         .info-item span {{ font-size: 0.9rem; word-break: break-all; }}
-        
+
         .playback-bar {{
             position: absolute;
             bottom: 20px;
@@ -151,7 +149,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         .progress-container {{ width: 300px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; cursor: pointer; position: relative; }}
         .progress-bar {{ height: 100%; background: #00d4ff; border-radius: 3px; width: 0%; transition: width 0.1s linear; }}
         .time-display {{ font-family: monospace; font-size: 0.8rem; min-width: 60px; }}
-        
+
     </style>
 </head>
 <body>
@@ -207,7 +205,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             </div>
         </div>
     </div>
-    
+
     <div class="playback-bar">
         <button id="play-btn" class="primary" onclick="togglePlayback()">▶ Play</button>
         <div class="progress-container" onclick="seek(event)">
@@ -222,7 +220,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         const content = document.getElementById('graph-content');
         const svg = document.getElementById('edges');
         const nodesContainer = document.getElementById('nodes');
-        
+
         // State
         let scale = 1;
         let pannedX = 0;
@@ -234,7 +232,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
         let animationTime = 0;
         let maxTime = 0;
         let animationFrame;
-        
+
         // Initialize
         function init() {{
             // Calculate max time for playback
@@ -242,7 +240,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 .map(n => [n.start_time, n.end_time])
                 .flat()
                 .filter(t => t);
-            
+
             if (timestamps.length > 0) {{
                 const minTime = Math.min(...timestamps);
                 graphData.nodes.forEach(n => {{
@@ -258,44 +256,44 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 }});
                 maxTime = graphData.nodes.length * 100;
             }}
-            
+
             layoutAndRender();
             centerGraph();
             setupInteractions();
         }}
-        
+
         function layoutAndRender() {{
             // Simple Tree Layout
             const levels = {{}};
             const nodeMap = {{}};
             graphData.nodes.forEach(n => nodeMap[n.id] = n);
-            
+
             const targets = new Set(graphData.edges.map(e => e.target));
             const roots = graphData.nodes.filter(n => !targets.has(n.id));
-            
+
             // Assign levels
             const queue = roots.map(r => ({{ id: r.id, level: 0 }}));
             const visited = new Set();
             const nodeLevels = {{}};
-            
+
             while (queue.length > 0) {{
                 const {{ id, level }} = queue.shift();
                 if (visited.has(id)) continue;
                 visited.add(id);
                 nodeLevels[id] = level;
-                
+
                 if (!levels[level]) levels[level] = [];
                 levels[level].push(id);
-                
+
                 graphData.edges.filter(e => e.source === id).forEach(e => {{
                     queue.push({{ id: e.target, level: level + 1 }});
                 }});
             }}
-            
+
             // Render Nodes
             const levelHeight = 150;
             const nodePositions = {{}};
-            
+
             Object.entries(levels).forEach(([level, ids]) => {{
                 const width = ids.length * 180;
                 ids.forEach((id, i) => {{
@@ -303,7 +301,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                     const x = (i * 180) - (width / 2) + 90;
                     const y = level * levelHeight + 50;
                     nodePositions[id] = {{ x, y }};
-                    
+
                     const node = nodeMap[id];
                     const div = document.createElement('div');
                     div.className = `node node-${{node.type}}`;
@@ -318,7 +316,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                     nodesContainer.appendChild(div);
                 }});
             }});
-            
+
             // Render Edges (Curved Bezier)
             graphData.edges.forEach(edge => {{
                 const start = nodePositions[edge.source];
@@ -330,27 +328,27 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                     const sy = start.y + 40; // bottom of node approx
                     const ex = end.x + 70;
                     const ey = end.y;
-                    
+
                     // Bezier curve
                     const c1x = sx;
                     const c1y = sy + 50;
                     const c2x = ex;
                     const c2y = ey - 50;
-                    
+
                     const d = `M ${{sx}} ${{sy}} C ${{c1x}} ${{c1y}}, ${{c2x}} ${{c2y}}, ${{ex}} ${{ey}}`;
-                    
+
                     path.setAttribute('d', d);
                     path.id = `edge-${{edge.source}}-${{edge.target}}`;
                     svg.appendChild(path);
                 }}
             }});
         }}
-        
+
         function selectNode(node, el, e) {{
             e.stopPropagation();
             document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
             el.classList.add('selected');
-            
+
             document.getElementById('node-details').style.display = 'block';
             document.getElementById('detail-name').textContent = node.name;
             document.getElementById('detail-type').textContent = node.type;
@@ -358,7 +356,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             document.getElementById('detail-heat').textContent = (node.heat_score !== undefined) ? (node.heat_score * 100).toFixed(0) + '%' : '-';
             document.getElementById('detail-meta').textContent = JSON.stringify(node.metadata, null, 2);
         }}
-        
+
         // Zoom & Pan Logic
         function setupInteractions() {{
             viewport.addEventListener('wheel', (e) => {{
@@ -367,7 +365,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 scale = Math.min(Math.max(0.1, scale * delta), 5);
                 updateTransform();
             }});
-            
+
             viewport.addEventListener('mousedown', (e) => {{
                 if (e.target === viewport || e.target === content || e.target.tagName === 'svg') {{
                     isDragging = true;
@@ -376,12 +374,12 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                     viewport.style.cursor = 'grabbing';
                 }}
             }});
-            
+
             window.addEventListener('mouseup', () => {{
                 isDragging = false;
                 viewport.style.cursor = 'grab';
             }});
-            
+
             window.addEventListener('mousemove', (e) => {{
                 if (isDragging) {{
                     pannedX = e.clientX - startX;
@@ -390,11 +388,11 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 }}
             }});
         }}
-        
+
         function updateTransform() {{
             content.style.transform = `translate(${{pannedX}}px, ${{pannedY}}px) scale(${{scale}})`;
         }}
-        
+
         function centerGraph() {{
             const bbox = content.getBoundingClientRect();
             // Initial center
@@ -403,39 +401,39 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
             scale = 0.8;
             updateTransform();
         }}
-        
+
         function resetZoom() {{
             centerGraph();
         }}
-        
+
         // Playback Logic
         function togglePlayback() {{
             isPlaying = !isPlaying;
             document.getElementById('play-btn').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
             if (isPlaying) animate();
         }}
-        
+
         function animate() {{
             if (!isPlaying) return;
-            
+
             animationTime += maxTime / 200; // Speed factor
             if (animationTime > maxTime) animationTime = 0;
-            
+
             updatePlaybackVisuals();
             animationFrame = requestAnimationFrame(animate);
         }}
-        
+
         function seek(e) {{
             const rect = e.currentTarget.getBoundingClientRect();
             const pct = (e.clientX - rect.left) / rect.width;
             animationTime = pct * maxTime;
             updatePlaybackVisuals();
         }}
-        
+
         function updatePlaybackVisuals() {{
             document.getElementById('progress').style.width = (animationTime / maxTime * 100) + '%';
             document.getElementById('time-display').textContent = (animationTime / 1000).toFixed(1) + 's';
-            
+
             // Highlight active nodes
             graphData.nodes.forEach(n => {{
                 const el = document.getElementById(`node-${{n.id}}`);
@@ -444,7 +442,7 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 }} else {{
                     el.classList.remove('active');
                 }}
-                
+
                 // Dim future nodes
                 if (n.relativeStart > animationTime) {{
                     el.classList.add('dimmed');
@@ -453,13 +451,13 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 }}
             }});
         }}
-        
+
         // Heatmap Logic
         function toggleHeatmap() {{
             isHeatmapMode = !isHeatmapMode;
             document.getElementById('heat-btn').textContent = isHeatmapMode ? '🌡️ Disable Heatmap' : '🌡️ Enable Heatmap';
             document.getElementById('heat-btn').classList.toggle('active');
-            
+
             graphData.nodes.forEach(n => {{
                 const el = document.getElementById(`node-${{n.id}}`);
                 if (isHeatmapMode) {{
@@ -476,39 +474,39 @@ HTML_TEMPLATE = '''<!DOCTYPE html>
                 }}
             }});
         }}
-        
+
         init();
     </script>
 </body>
-</html>'''
+</html>"""
 
 
 def export_html(graph: OrchestrationGraph) -> str:
     """
     Export graph to interactive HTML.
-    
+
     Returns:
         HTML string with embedded visualization.
     """
     # Calculate critical path duration
     critical_path = graph.get_critical_path()
     critical_duration = sum(n.duration_ms or 0 for n in critical_path)
-    
+
     # Prepare JSON data
     graph_json = graph.to_json()
-    
+
     html = HTML_TEMPLATE.format(
         title=graph.name,
         node_count=len(graph.nodes),
         critical_duration=f"{critical_duration:.0f}",
-        graph_json=graph_json
+        graph_json=graph_json,
     )
-    
+
     return html
 
 
 def save_html(graph: OrchestrationGraph, file_path: str) -> None:
     """Save graph as HTML file."""
     content = export_html(graph)
-    with open(file_path, "w") as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
