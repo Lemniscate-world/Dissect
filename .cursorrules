@@ -35,13 +35,13 @@ Your goal is to build a "Boardroom Ready" visualization tool that is framework-a
 ## 📝 Coding Standards
 - **Python**: Type hints on EVERYTHING. `def func(x: int) -> str:`.
 - **Testing**: MANDATORY after each code add.
-    - **Coverage**: Minimum 60% required. Fail build if lower.
-    - **Automated Tests**: CI/CD ready.
-    - **Unit Tests**: Isolated function logic.
-    - **Integration Tests**: End-to-end trace parsing.
-    - **Logic Tests**: Graph constraints and critical path correctness.
-    - **Fuzzy Tests**: Resilience against malformed inputs.
-    - **Module Coverage**: Ensure EACH part, EACH module is tested. No exceptions.
+- **Coverage**: Minimum 60% required. Fail build if lower.
+- **Automated Tests**: CI/CD ready.
+- **Unit Tests**: Isolated function logic.
+- **Integration Tests**: End-to-end trace parsing.
+- **Logic Tests**: Graph constraints and critical path correctness.
+- **Fuzzy Tests**: Resilience against malformed inputs.
+- **Module Coverage**: Ensure EACH part, EACH module is tested. No exceptions.
 - **Protocol**:
     - **Step-by-Step**: Follow the plan. Do not jump ahead.
     - **Phase Verification**: Verify ALL tasks of Phase N are complete before starting Phase N+1.
@@ -55,3 +55,23 @@ Your goal is to build a "Boardroom Ready" visualization tool that is framework-a
 ## 🔄 Common Workflows
 - **New Parser**: Subclass `TraceParser` in `trace_receiver.py`. Add detection in `parse_trace_file`.
 - **Update Viz**: Edit `HTML_TEMPLATE` in `html.py`. Run `cli.py visualize` to regenerate examples.
+
+## 🤖 Antigravity Integration
+- **Context Preservation**: Always check `./.antigravity/artifacts/` for:
+    - `implementation_plan.md`: The active roadmap.
+    - `task.md`: Current progress and remaining checklist.
+    - `walkthrough.md`: Details of completed work and verification results.
+- **Proactive Maintenance**: **Mandatory.** Always update these artifacts before finishing a task. Reflect all architectural changes in the plan and track all sub-tasks in the task list.
+- **Git Persistence**: Commit these artifacts to track progress across machines. They are the source of truth.
+
+## 🎨 Design Philosophy
+- **Anti-Generic**: Avoid standard bootstrap/material looks. Create custom, high-fidelity components.
+- **Depth & Texture**: Use glassmorphism (backdrop-blur), soft shadows, and gradients to create layered depth.
+- **Motion is Meaning**: Every interaction should have a fluid, purposeful animation. Use spring-like transitions.
+- **Human-Centric**: Information density should be high but readable; use whitespace and modern typography hierarchy (e.g., Outfit, Inter).
+## 🧪 QA & Testing
+- **Always Have Full UI Tests Ensured**: Every UI change must be accompanied by comprehensive UI tests using the browser tool. Verify:
+    - Interactive elements (buttons, zoom, pan) are functional.
+    - Template placeholders are correctly replaced.
+    - Visual regressions (mesh gradient, glassmorphism) are avoided.
+    - Performance (smooth animations) remains high.

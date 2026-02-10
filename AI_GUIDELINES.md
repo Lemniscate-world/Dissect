@@ -56,11 +56,15 @@ Dissect is a **Translation Layer**.
 ### 6. Protocol
 - **Step-by-Step**: Stick to the plan.
 - **Phase Gate**: Verify Phase N completion before N+1.
+- **Context Persistence**: Always update and maintain artifacts in `./.antigravity/artifacts/` (tasks, plans, walkthroughs). These are the single source of truth for project evolution across AI assistants and sessions.
+- **Git Tracking**: Ensure these artifacts are committed regularly to maintain project context across different environments.
 
 ### Updating Visualization
 1.  Modify `dissect/exporters/html.py`.
-2.  **Regenerate All**: Ensure you didn't break existing examples.
+2.  **Always Have Full UI Tests Ensured**: Every UI change must be accompanied by comprehensive UI tests.
+3.  **Regenerate All**: Ensure you didn't break existing examples.
     ```bash
-    python -m dissect.cli visualize --file examples/crewai_trace.json ...
-    python -m dissect.cli visualize --file examples/autogen_trace.json ...
+    python3 -m dissect.cli visualize --file examples/crewai_trace.json ...
+    python3 -m dissect.cli visualize --file examples/autogen_trace.json ...
     ```
+4.  **Run UI Verification**: Use the `browser_subagent` to verify interactions and responsiveness of the newly generated files.

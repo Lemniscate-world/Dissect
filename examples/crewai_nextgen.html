@@ -1,10 +1,4 @@
-"""
-Dissect 2.0 - High-Fidelity HTML Exporter
-"""
-
-from ..graph import OrchestrationGraph
-
-HTML_TEMPLATE = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -14,7 +8,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        :root {{
+        :root {
             --bg-deep: #05050a;
             --panel-bg: rgba(13, 13, 22, 0.7);
             --accent-primary: #00d4ff;
@@ -24,21 +18,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             --text-dim: #9494a3;
             --glass-border: rgba(255, 255, 255, 0.08);
             --node-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }}
+        }
 
-        * {{ margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }}
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
 
-        body {{
+        body {
             font-family: 'Outfit', sans-serif;
             background-color: var(--bg-deep);
             color: var(--text-main);
             height: 100vh;
             overflow: hidden;
             position: relative;
-        }}
+        }
 
         /* Animated Mesh Gradient Background */
-        .mesh-bg {{
+        .mesh-bg {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
@@ -51,14 +45,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             filter: blur(80px);
             opacity: 0.6;
             animation: meshFlow 20s ease infinite alternate;
-        }}
+        }
 
-        @keyframes meshFlow {{
-            0% {{ transform: scale(1); }}
-            100% {{ transform: scale(1.1); translate: 20px -20px; }}
-        }}
+        @keyframes meshFlow {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); translate: 20px -20px; }
+        }
 
-        header {{
+        header {
             position: fixed;
             top: 20px; left: 20px; right: 20px;
             height: 64px;
@@ -72,14 +66,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 0 24px;
             z-index: 1000;
             box-shadow: var(--node-shadow);
-        }}
+        }
 
-        header h1 {{ font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }}
-        header h1 span {{ color: var(--accent-primary); }}
+        header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+        header h1 span { color: var(--accent-primary); }
 
-        .controls {{ display: flex; gap: 12px; }}
+        .controls { display: flex; gap: 12px; }
 
-        button {{
+        button {
             background: rgba(255,255,255,0.05);
             border: 1px solid var(--glass-border);
             color: var(--text-main);
@@ -90,50 +84,50 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-weight: 600;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-family: inherit;
-        }}
+        }
 
-        button:hover {{
+        button:hover {
             background: rgba(255,255,255,0.1);
             border-color: rgba(255,255,255,0.2);
             transform: translateY(-1px);
-        }}
+        }
 
-        button.primary {{
+        button.primary {
             background: var(--accent-primary);
             color: #000;
             border: none;
             box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-        }}
+        }
 
-        button.primary:hover {{
+        button.primary:hover {
             background: #fff;
             box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
-        }}
+        }
 
-        .container {{
+        .container {
             display: flex;
             height: 100vh;
             padding-top: 100px;
             position: relative;
-        }}
+        }
 
-        #graph-viewport {{
+        #graph-viewport {
             flex: 1;
             position: relative;
             overflow: hidden;
             cursor: grab;
-        }}
+        }
 
-        #graph-viewport:active {{ cursor: grabbing; }}
+        #graph-viewport:active { cursor: grabbing; }
 
-        #graph-content {{
+        #graph-content {
             position: absolute;
             top: 0; left: 0;
             transform-origin: 0 0;
             pointer-events: none;
-        }}
+        }
 
-        #sidebar {{
+        #sidebar {
             width: 360px;
             margin: 0 20px 20px 0;
             background: var(--panel-bg);
@@ -144,9 +138,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             overflow-y: auto;
             z-index: 100;
             box-shadow: var(--node-shadow);
-        }}
+        }
 
-        .node {{
+        .node {
             position: absolute;
             padding: 16px 20px;
             border-radius: 14px;
@@ -161,30 +155,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             display: flex;
             flex-direction: column;
             gap: 8px;
-        }}
+        }
 
-        .node:hover {{
+        .node:hover {
             transform: scale(1.05) translateY(-5px);
             box-shadow: 0 20px 40px rgba(0,0,0,0.6);
             z-index: 100;
             border-color: rgba(255,255,255,0.3);
-        }}
+        }
 
-        .node.selected {{
+        .node.selected {
             border: 2px solid var(--accent-primary);
             box-shadow: 0 0 30px rgba(0,212,255,0.4);
-        }}
+        }
 
-        .node::before {{
+        .node::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             border-radius: inherit;
             background: radial-gradient(circle at top left, rgba(255,255,255,0.1), transparent);
             pointer-events: none;
-        }}
+        }
 
-        .node .type-badge {{
+        .node .type-badge {
             font-size: 0.65rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -194,57 +188,57 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-radius: 4px;
             width: fit-content;
             background: rgba(0,0,0,0.2);
-        }}
+        }
 
         /* High-End Node Gradients */
-        .node-agent {{ background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }}
-        .node-tool {{ background: linear-gradient(135deg, #d4145a 0%, #fbb03b 100%); }}
-        .node-llm_call {{ background: linear-gradient(135deg, #662d8c 0%, #ed1e79 100%); }}
-        .node-user_input {{ background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }}
-        .node-output {{ background: linear-gradient(135deg, #ff4e50 0%, #f9d423 100%); }}
+        .node-agent { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .node-tool { background: linear-gradient(135deg, #d4145a 0%, #fbb03b 100%); }
+        .node-llm_call { background: linear-gradient(135deg, #662d8c 0%, #ed1e79 100%); }
+        .node-user_input { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .node-output { background: linear-gradient(135deg, #ff4e50 0%, #f9d423 100%); }
 
-        .node .name {{ font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; }}
-        .node .duration {{ font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: rgba(255,255,255,0.6); }}
+        .node .name { font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; }
+        .node .duration { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: rgba(255,255,255,0.6); }
 
-        svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }}
+        svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 
         /* Path Styling */
-        svg path {{
+        svg path {
             stroke: rgba(255,255,255,0.15);
             stroke-width: 2.5;
             fill: none;
             transition: stroke 0.4s, stroke-width 0.4s;
-        }}
+        }
 
-        svg path.active {{
+        svg path.active {
             stroke: var(--accent-primary);
             stroke-width: 4;
             filter: drop-shadow(0 0 8px var(--accent-primary));
-        }}
+        }
 
         /* Data Flow Pulse Animation */
-        .flow-pulse {{
+        .flow-pulse {
             fill: var(--accent-primary);
             filter: blur(3px) drop-shadow(0 0 5px var(--accent-primary));
             opacity: 0;
-        }}
+        }
 
-        .active-pulse {{ opacity: 1; }}
+        .active-pulse { opacity: 1; }
 
-        .info-panel h3 {{ margin-bottom: 1.5rem; color: var(--accent-primary); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; }}
+        .info-panel h3 { margin-bottom: 1.5rem; color: var(--accent-primary); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; }
 
-        .info-item {{
+        .info-item {
             margin-bottom: 12px;
             background: rgba(255,255,255,0.03);
             padding: 16px;
             border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.05);
-        }}
+        }
 
-        .info-item label {{ font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }}
-        .info-item span {{ font-size: 1rem; font-weight: 600; color: #fff; }}
+        .info-item label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+        .info-item span { font-size: 1rem; font-weight: 600; color: #fff; }
 
-        .playback-bar {{
+        .playback-bar {
             position: fixed;
             bottom: 30px;
             left: 50%;
@@ -254,14 +248,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 12px 30px;
             border-radius: 24px;
             display: flex;
-            align-items: center; gap: 20px; border: 1px solid var(--glass-border); z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }}
-        .progress-container {{ width: 400px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; position: relative; overflow: hidden; }}
-        .progress-bar {{ height: 100%; background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary)); border-radius: 5px; width: 0%; transition: width 0.1s linear; }}
-        .time-display {{ font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; font-weight: 500; min-width: 70px; color: var(--accent-primary); }}
-        ::-webkit-scrollbar {{ width: 6px; }}
-        ::-webkit-scrollbar-track {{ background: transparent; }}
-        ::-webkit-scrollbar-thumb {{ background: rgba(255,255,255,0.1); border-radius: 10px; }}
-        ::-webkit-scrollbar-thumb:hover {{ background: rgba(255,255,255,0.2); }}
+            align-items: center; gap: 20px; border: 1px solid var(--glass-border); z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .progress-container { width: 400px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; position: relative; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary)); border-radius: 5px; width: 0%; transition: width 0.1s linear; }
+        .time-display { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; font-weight: 500; min-width: 70px; color: var(--accent-primary); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
@@ -336,65 +330,65 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let animationTime = 0;
         let maxTime = 0;
         let animationFrame;
-        function init() {{
-            const timestamps = graphData.nodes.map(n => [n.start_time, n.end_time]).flat().filter(t => t !== undefined);
-            if (timestamps.length > 0) {{
+        function init() {
+            const timestamps = graphData.nodes.map(n => [n.start_time, n.end_time]).flat().filter(t => t);
+            if (timestamps.length > 0) {
                 const minTime = Math.min(...timestamps);
-                graphData.nodes.forEach(n => {{
-                    if (n.start_time !== undefined) n.relativeStart = (n.start_time - minTime) * 1000;
-                    if (n.end_time !== undefined) n.relativeEnd = (n.end_time - minTime) * 1000;
-                }});
+                graphData.nodes.forEach(n => {
+                    if (n.start_time) n.relativeStart = (n.start_time - minTime) * 1000;
+                    if (n.end_time) n.relativeEnd = (n.end_time - minTime) * 1000;
+                });
                 maxTime = Math.max(...graphData.nodes.map(n => n.relativeEnd || 0));
-            }} else {{
-                graphData.nodes.forEach((n, i) => {{
+            } else {
+                graphData.nodes.forEach((n, i) => {
                     n.relativeStart = i * 200;
                     n.relativeEnd = (i + 1) * 200;
-                }});
+                });
                 maxTime = graphData.nodes.length * 200;
-            }}
+            }
             renderGraph();
             centerGraph();
             setupEvents();
-        }}
-        function renderGraph() {{
-            const levels = {{}};
-            const nodeMap = {{}};
+        }
+        function renderGraph() {
+            const levels = {};
+            const nodeMap = {};
             graphData.nodes.forEach(n => nodeMap[n.id] = n);
             const targets = new Set(graphData.edges.map(e => e.target));
             const roots = graphData.nodes.filter(n => !targets.has(n.id));
-            const queue = roots.map(r => ({{ id: r.id, level: 0 }}));
+            const queue = roots.map(r => ({ id: r.id, level: 0 }));
             const visited = new Set();
-            while (queue.length > 0) {{
-                const {{ id, level }} = queue.shift();
+            while (queue.length > 0) {
+                const { id, level } = queue.shift();
                 if (visited.has(id)) continue;
                 visited.add(id);
                 if (!levels[level]) levels[level] = [];
                 levels[level].push(id);
-                graphData.edges.filter(e => e.source === id).forEach(e => {{
-                    queue.push({{ id: e.target, level: level + 1 }});
-                }});
-            }}
+                graphData.edges.filter(e => e.source === id).forEach(e => {
+                    queue.push({ id: e.target, level: level + 1 });
+                });
+            }
             const hGap = 260;
             const vGap = 200;
-            const nodePositions = {{}};
-            Object.entries(levels).forEach(([level, ids]) => {{
+            const nodePositions = {};
+            Object.entries(levels).forEach(([level, ids]) => {
                 const width = ids.length * hGap;
-                ids.forEach((id, i) => {{
+                ids.forEach((id, i) => {
                     const x = (i * hGap) - (width / 2) + (hGap/2);
                     const y = level * vGap + 80;
-                    nodePositions[id] = {{ x, y }};
+                    nodePositions[id] = { x, y };
                     const node = nodeMap[id];
                     const div = document.createElement('div');
-                    div.className = `node node-${{node.type}}`;
-                    div.id = `node-${{id}}`;
+                    div.className = `node node-${node.type}`;
+                    div.id = `node-${id}`;
                     div.style.left = x + 'px';
                     div.style.top = y + 'px';
                     div.innerHTML = `
-                        <div class="type-badge">${{node.type.replace('_',' ')}}</div>
-                        <div class="name">${{node.name}}</div>
-                        ${{node.duration_ms ? `<div class="duration">${{node.duration_ms.toFixed(0)}}ms</div>` : ''}}
+                        <div class="type-badge">${node.type.replace('_',' ')}</div>
+                        <div class="name">${node.name}</div>
+                        ${node.duration_ms ? `<div class="duration">${node.duration_ms.toFixed(0)}ms</div>` : ''}
                     `;
-                    div.onclick = (e) => {{
+                    div.onclick = (e) => {
                         document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
                         div.classList.add('selected');
                         document.getElementById('node-details').style.display = 'block';
@@ -402,134 +396,111 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         document.getElementById('detail-type').textContent = node.type;
                         document.getElementById('detail-duration').textContent = node.duration_ms ? node.duration_ms.toFixed(0) + 'ms' : '-';
                         document.getElementById('detail-meta').textContent = JSON.stringify(node.metadata, null, 2);
-                    }};
+                    };
                     nodesContainer.appendChild(div);
-                }});
-            }});
-            graphData.edges.forEach(edge => {{
+                });
+            });
+            graphData.edges.forEach(edge => {
                 const start = nodePositions[edge.source];
                 const end = nodePositions[edge.target];
-                if (start && end) {{
+                if (start && end) {
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     const sx = start.x + 100;
                     const sy = start.y + 60;
                     const ex = end.x + 100;
                     const ey = end.y;
                     const cp = (ey - sy) / 2;
-                    const d = `M ${{sx}} ${{sy}} C ${{sx}} ${{sy + cp}}, ${{ex}} ${{ey - cp}}, ${{ex}} ${{ey}}`;
+                    const d = `M ${sx} ${sy} C ${sx} ${sy + cp}, ${ex} ${ey - cp}, ${ex} ${ey}`;
                     path.setAttribute('d', d);
-                    path.id = `edge-${{edge.source}}-${{edge.target}}`;
+                    path.id = `edge-${edge.source}-${edge.target}`;
                     svgLayer.appendChild(path);
                     const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                     pulse.setAttribute('r', '5');
                     pulse.classList.add('flow-pulse');
-                    pulse.id = `pulse-${{edge.source}}-${{edge.target}}`;
+                    pulse.id = `pulse-${edge.source}-${edge.target}`;
                     svgLayer.appendChild(pulse);
                     const animate = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
                     animate.setAttribute('dur', '1.5s');
                     animate.setAttribute('repeatCount', 'indefinite');
                     animate.setAttribute('path', d);
                     pulse.appendChild(animate);
-                }}
-            }});
-        }}
-        function setupEvents() {{
-            viewport.addEventListener('wheel', (e) => {{
+                }
+            });
+        }
+        function setupEvents() {
+            viewport.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? 0.9 : 1.1;
                 scale = Math.min(Math.max(0.1, scale * delta), 4);
                 updateT();
-            }});
-            viewport.addEventListener('mousedown', (e) => {{
+            });
+            viewport.addEventListener('mousedown', (e) => {
                 if (e.target.closest('.node')) return;
                 isDragging = true;
                 startX = e.clientX - pannedX;
                 startY = e.clientY - pannedY;
-            }});
+            });
             window.addEventListener('mouseup', () => isDragging = false);
-            window.addEventListener('mousemove', (e) => {{
-                if (isDragging) {{
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
                     pannedX = e.clientX - startX;
                     pannedY = e.clientY - startY;
                     updateT();
-                }}
-            }});
-        }}
-        function updateT() {{ content.style.transform = `translate(${{pannedX}}px, ${{pannedY}}px) scale(${{scale}})`; }}
-        function centerGraph() {{ pannedX = viewport.offsetWidth / 2 - 100; pannedY = 40; updateT(); }}
-        function resetZoom() {{ centerGraph(); scale = 0.8; updateT(); }}
-        function togglePlayback() {{
+                }
+            });
+        }
+        function updateT() { content.style.transform = `translate(${pannedX}px, ${pannedY}px) scale(${scale})`; }
+        function centerGraph() { pannedX = viewport.offsetWidth / 2 - 100; pannedY = 40; updateT(); }
+        function resetZoom() { centerGraph(); scale = 0.8; updateT(); }
+        function togglePlayback() {
             isPlaying = !isPlaying;
             document.getElementById('play-btn').textContent = isPlaying ? 'Pause Trace' : 'Resume Trace';
             if (isPlaying) loop();
-        }}
-        function loop() {{
+        }
+        function loop() {
             if (!isPlaying) return;
             animationTime += maxTime / 300;
             if (animationTime > maxTime) animationTime = 0;
             updateUI();
             animationFrame = requestAnimationFrame(loop);
-        }}
-        function seek(e) {{
+        }
+        function seek(e) {
             const pct = (e.clientX - e.currentTarget.getBoundingClientRect().left) / e.currentTarget.offsetWidth;
             animationTime = pct * maxTime;
             updateUI();
-        }}
-        function updateUI() {{
+        }
+        function updateUI() {
             document.getElementById('progress').style.width = (animationTime / maxTime * 100) + '%';
             document.getElementById('time-display').textContent = (animationTime / 1000).toFixed(1) + 's';
-            graphData.nodes.forEach(n => {{
-                const el = document.getElementById(`node-${{n.id}}`);
-                if (!el) return;
+            graphData.nodes.forEach(n => {
+                const el = document.getElementById(`node-${n.id}`);
                 const active = n.relativeStart <= animationTime && (n.relativeEnd || n.relativeStart + 200) >= animationTime;
                 el.style.opacity = n.relativeStart > animationTime ? '0.2' : '1';
                 el.style.transform = active ? `scale(1.1) translateY(-10px)` : '';
                 if (active) el.style.boxShadow = '0 0 40px ' + (getComputedStyle(el).backgroundColor);
                 else el.style.boxShadow = '';
-            }});
-            graphData.edges.forEach(e => {{
-                const p = document.getElementById(`pulse-${{e.source}}-${{e.target}}`);
-                const edge = document.getElementById(`edge-${{e.source}}-${{e.target}}`);
-                if (!p || !edge) return;
+            });
+            graphData.edges.forEach(e => {
+                const p = document.getElementById(`pulse-${e.source}-${e.target}`);
+                const edge = document.getElementById(`edge-${e.source}-${e.target}`);
                 const sourceNode = graphData.nodes.find(n => n.id === e.source);
                 const active = sourceNode.relativeStart <= animationTime && (sourceNode.relativeEnd || sourceNode.relativeStart + 500) >= animationTime;
                 p.style.opacity = active ? '1' : '0';
                 edge.classList.toggle('active', active);
-            }});
-        }}
-        function toggleHeatmap() {{
+            });
+        }
+        function toggleHeatmap() {
             isHeatmapMode = !isHeatmapMode;
             document.getElementById('heat-btn').classList.toggle('primary', isHeatmapMode);
-            graphData.nodes.forEach(n => {{
-                const el = document.getElementById(`node-${{n.id}}`);
-                if (isHeatmapMode) {{
+            graphData.nodes.forEach(n => {
+                const el = document.getElementById(`node-${n.id}`);
+                if (isHeatmapMode) {
                     const h = 120 * (1 - (n.heat_score || 0));
-                    el.style.background = `linear-gradient(135deg, hsl(${{h}}, 70%, 45%), hsl(${{h}}, 70%, 30%))`;
-                }} else el.style.background = '';
-            }});
-        }}
+                    el.style.background = `linear-gradient(135deg, hsl(${h}, 70%, 45%), hsl(${h}, 70%, 30%))`;
+                } else el.style.background = '';
+            });
+        }
         init();
     </script>
 </body>
-</html>"""
-
-
-def export_html(graph: OrchestrationGraph) -> str:
-    """Export graph to high-fidelity interactive HTML."""
-    critical_path = graph.get_critical_path()
-    critical_duration = sum(n.duration_ms or 0 for n in critical_path)
-    graph_json = graph.to_json()
-
-    return HTML_TEMPLATE.format(
-        title=graph.name,
-        node_count=len(graph.nodes),
-        critical_duration=f"{critical_duration:.0f}",
-        graph_json=graph_json,
-    )
-
-
-def save_html(graph: OrchestrationGraph, file_path: str) -> None:
-    """Save graph as high-fidelity HTML file."""
-    content = export_html(graph)
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(content)
+</html>
