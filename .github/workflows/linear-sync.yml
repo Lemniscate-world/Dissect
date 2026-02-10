@@ -1,0 +1,79 @@
+name: Sync commits to Linear
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Post commits to Linear
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          LINEAR_TEAM_ID: ${{ secrets.LINEAR_TEAM_ID }}
+        run: |
+          if [ -z "$LINEAR_API_KEY" ]; then
+            echo "LINEAR_API_KEY not set, skipping"
+            exit 0
+          fi
+
+          # Get commits from this push
+          COMMITS=$(git log --pretty=format:'%h|%s|%an|%ai' ${{ github.event.before }}..${{ github.sha }} 2>/dev/null || git log -1 --pretty=format:'%h|%s|%an|%ai')
+
+          # Build markdown body
+          BODY="## 🔄 Push to \`main\` — $(date -u +%Y-%m-%d)\n\n"
+          BODY+="**Branch:** main\n"
+          BODY+="**Repo:** ${{ github.repository }}\n\n"
+          BODY+="### Commits\n"
+
+          while IFS='|' read -r hash subject author date; do
+            BODY+="- [\`${hash}\`](${{ github.server_url }}/${{ github.repository }}/commit/${hash}) ${subject} — *${author}*\n"
+          done <<< "$COMMITS"
+
+          # Check if any commit references a Linear issue (e.g. DIS-42, DIS-123)
+          ISSUE_IDS=$(echo "$COMMITS" | grep -oP '[A-Z]+-[0-9]+' | sort -u || true)
+
+          if [ -n "$ISSUE_IDS" ]; then
+            # Post comment on each referenced Linear issue
+            for ISSUE_ID in $ISSUE_IDS; do
+              echo "Posting to Linear issue: $ISSUE_ID"
+
+              # Resolve issue UUID from identifier
+              ISSUE_UUID=$(curl -s -X POST https://api.linear.app/graphql \
+                -H "Authorization: $LINEAR_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d "{\"query\": \"{ issueSearch(filter: { identifier: { eq: \\\"$ISSUE_ID\\\" } }) { nodes { id } } }\"}" \
+                | python3 -c "import sys,json; nodes=json.load(sys.stdin)['data']['issueSearch']['nodes']; print(nodes[0]['id'] if nodes else '')" 2>/dev/null || true)
+
+              if [ -n "$ISSUE_UUID" ]; then
+                ESCAPED_BODY=$(echo -e "$BODY" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")
+                curl -s -X POST https://api.linear.app/graphql \
+                  -H "Authorization: $LINEAR_API_KEY" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"query\": \"mutation { commentCreate(input: { issueId: \\\"$ISSUE_UUID\\\", body: $ESCAPED_BODY }) { success } }\"}"
+                echo " -> Comment posted on $ISSUE_ID"
+              fi
+            done
+          else
+            # No issue ID found — create a standalone issue as dev log entry
+            echo "No Linear issue ID in commits, creating dev log entry"
+
+            COMMIT_SUBJECT=$(echo "$COMMITS" | head -1 | cut -d'|' -f2)
+            ESCAPED_BODY=$(echo -e "$BODY" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")
+            ESCAPED_TITLE=$(echo "📝 Dev update: $COMMIT_SUBJECT" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))")
+
+            if [ -n "$LINEAR_TEAM_ID" ]; then
+              curl -s -X POST https://api.linear.app/graphql \
+                -H "Authorization: $LINEAR_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d "{\"query\": \"mutation { issueCreate(input: { teamId: \\\"$LINEAR_TEAM_ID\\\", title: $ESCAPED_TITLE, description: $ESCAPED_BODY }) { success } }\"}"
+              echo " -> Dev log issue created"
+            else
+              echo "LINEAR_TEAM_ID not set, cannot create standalone issue"
+            fi
+          fi
