@@ -76,7 +76,29 @@ AI assistants working on this project MUST NOT be passive executors. You are a *
 
 > **The goal: every interaction should leave the codebase better than we found it, and every feature should genuinely serve the people who use Dissect.**
 
-### 7. Protocol
+### 7. Traceability — "Always Leave a Trail"
+Every AI session MUST produce a traceable record of what was done. This is non-negotiable.
+
+**Commit discipline:**
+- **Conventional Commits**: Use prefixes: `feat:`, `fix:`, `refactor:`, `style:`, `test:`, `docs:`, `chore:`.
+- **Scope tag**: Include the module in parentheses: `feat(diff): add trace comparison command`.
+- **Linear issue IDs**: If a Linear issue exists, reference it: `feat(diff): add trace comparison [DIS-42]`.
+- **Atomic commits**: One logical change per commit. Don't bundle unrelated changes.
+
+**Session summary (MANDATORY at end of every session):**
+Before finishing, provide a structured summary the human can paste into Linear/Slack/anywhere:
+```
+## Session Summary — [DATE]
+**What was done:** (bullet list of changes)
+**Files changed:** (list)
+**Tests:** X passing, Y% coverage
+**Next steps:** (what remains)
+**Blockers:** (if any)
+```
+
+**Why:** Multiple editors (Cursor, Augment, Copilot, Antigravity) work on this project. Git history + structured summaries are the universal source of truth that lets the team follow progress regardless of which tool was used.
+
+### 8. Protocol
 - **Step-by-Step**: Stick to the plan.
 - **Phase Gate**: Verify Phase N completion before N+1.
 - **Context Persistence**: Always update and maintain artifacts in `./.antigravity/artifacts/` (tasks, plans, walkthroughs). These are the single source of truth for project evolution across AI assistants and sessions.
