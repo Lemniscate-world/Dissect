@@ -68,7 +68,6 @@ class TestCLI(unittest.TestCase):
         mock_parse.assert_called_once_with("test.json")
         mock_explain.assert_called_once()
 
-
     @patch("dissect.cli.format_diff")
     @patch("dissect.cli.diff_graphs")
     @patch("dissect.cli.parse_trace_file")

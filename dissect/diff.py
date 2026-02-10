@@ -8,7 +8,7 @@ Compare two OrchestrationGraphs and report differences:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from .graph import Node, OrchestrationGraph
 
@@ -85,8 +85,47 @@ class TraceDiff:
 
     @property
     def has_changes(self) -> bool:
-        return len(self.added_nodes) > 0 or len(self.removed_nodes) > 0 or \
-               len(self.changed_nodes) > 0 or len(self.edge_diffs) > 0
+        return (
+            len(self.added_nodes) > 0
+            or len(self.removed_nodes) > 0
+            or len(self.changed_nodes) > 0
+            or len(self.edge_diffs) > 0
+        )
+
+
+def _collect_edge_keys(graph: OrchestrationGraph) -> Set[Tuple[str, str]]:
+    """Collect (source_name, target_name) pairs for all edges in a graph."""
+    keys: Set[Tuple[str, str]] = set()
+    for edge in graph.edges:
+        src = graph.nodes.get(edge.source_id)
+        tgt = graph.nodes.get(edge.target_id)
+        if src and tgt:
+            keys.add((src.name, tgt.name))
+    return keys
+
+
+def _compare_node_durations(name: str, old_node: Node, new_node: Node) -> NodeDiff:
+    """Compare durations of two nodes that exist in both traces."""
+    old_dur = old_node.duration_ms
+    new_dur = new_node.duration_ms
+    change_ms = None
+    change_pct = None
+
+    if old_dur is not None and new_dur is not None:
+        change_ms = new_dur - old_dur
+        if old_dur > 0:
+            change_pct = (change_ms / old_dur) * 100
+
+    status = "changed" if change_ms and abs(change_ms) > 0.01 else "unchanged"
+    return NodeDiff(
+        node_id=new_node.id,
+        name=name,
+        status=status,
+        old_duration_ms=old_dur,
+        new_duration_ms=new_dur,
+        duration_change_ms=change_ms,
+        duration_change_pct=change_pct,
+    )
 
 
 def diff_graphs(old: OrchestrationGraph, new: OrchestrationGraph) -> TraceDiff:
@@ -97,55 +136,38 @@ def diff_graphs(old: OrchestrationGraph, new: OrchestrationGraph) -> TraceDiff:
     """
     result = TraceDiff(old_name=old.name, new_name=new.name)
 
-    # Build name-to-node maps
     old_by_name: Dict[str, Node] = {n.name: n for n in old.nodes.values()}
     new_by_name: Dict[str, Node] = {n.name: n for n in new.nodes.values()}
 
-    all_names = set(old_by_name.keys()) | set(new_by_name.keys())
-
-    for name in sorted(all_names):
+    for name in sorted(set(old_by_name) | set(new_by_name)):
         old_node = old_by_name.get(name)
         new_node = new_by_name.get(name)
 
         if old_node and not new_node:
-            result.node_diffs.append(NodeDiff(
-                node_id=old_node.id, name=name, status="removed",
-                old_duration_ms=old_node.duration_ms,
-            ))
+            result.node_diffs.append(
+                NodeDiff(
+                    node_id=old_node.id,
+                    name=name,
+                    status="removed",
+                    old_duration_ms=old_node.duration_ms,
+                )
+            )
         elif new_node and not old_node:
-            result.node_diffs.append(NodeDiff(
-                node_id=new_node.id, name=name, status="added",
-                new_duration_ms=new_node.duration_ms,
-            ))
+            result.node_diffs.append(
+                NodeDiff(
+                    node_id=new_node.id,
+                    name=name,
+                    status="added",
+                    new_duration_ms=new_node.duration_ms,
+                )
+            )
         else:
-            # Both exist — compare durations
-            old_dur = old_node.duration_ms
-            new_dur = new_node.duration_ms
-            change_ms = None
-            change_pct = None
+            assert old_node is not None
+            assert new_node is not None
+            result.node_diffs.append(_compare_node_durations(name, old_node, new_node))
 
-            if old_dur is not None and new_dur is not None:
-                change_ms = new_dur - old_dur
-                if old_dur > 0:
-                    change_pct = (change_ms / old_dur) * 100
-
-            status = "changed" if change_ms and abs(change_ms) > 0.01 else "unchanged"
-            result.node_diffs.append(NodeDiff(
-                node_id=new_node.id, name=name, status=status,
-                old_duration_ms=old_dur, new_duration_ms=new_dur,
-                duration_change_ms=change_ms, duration_change_pct=change_pct,
-            ))
-
-    # Compare edges by (source_name, target_name) pairs
-    def edge_key(graph: OrchestrationGraph, edge) -> Optional[Tuple[str, str]]:
-        src = graph.nodes.get(edge.source_id)
-        tgt = graph.nodes.get(edge.target_id)
-        if src and tgt:
-            return (src.name, tgt.name)
-        return None
-
-    old_edges = {edge_key(old, e) for e in old.edges if edge_key(old, e)}
-    new_edges = {edge_key(new, e) for e in new.edges if edge_key(new, e)}
+    old_edges = _collect_edge_keys(old)
+    new_edges = _collect_edge_keys(new)
 
     for src, tgt in sorted(new_edges - old_edges):
         result.edge_diffs.append(EdgeDiff(source=src, target=tgt, status="added"))
@@ -155,59 +177,63 @@ def diff_graphs(old: OrchestrationGraph, new: OrchestrationGraph) -> TraceDiff:
     return result
 
 
+def _format_duration_section(title: str, nodes: List[NodeDiff], arrow: str) -> List[str]:
+    """Format a duration regressions or improvements section."""
+    lines = [title]
+    for d in nodes:
+        pct = f" ({d.duration_change_pct:+.1f}%)" if d.duration_change_pct else ""
+        lines.append(
+            f"  {arrow} {d.name}: {d.old_duration_ms:.0f}ms → "
+            f"{d.new_duration_ms:.0f}ms ({d.duration_change_ms:+.0f}ms{pct})"
+        )
+    lines.append("")
+    return lines
+
+
+def _format_node_list(
+    title: str, nodes: List[NodeDiff], symbol: str, duration_attr: str
+) -> List[str]:
+    """Format a list of added or removed nodes."""
+    lines = [title]
+    for d in nodes:
+        dur_val = getattr(d, duration_attr)
+        dur = f" ({dur_val:.0f}ms)" if dur_val else ""
+        lines.append(f"  {symbol} {d.name}{dur}")
+    lines.append("")
+    return lines
+
+
 def format_diff(diff: TraceDiff) -> str:
     """Format a TraceDiff as a human-readable string."""
-    lines = []
-    lines.append(f"Comparing: {diff.old_name} → {diff.new_name}")
-    lines.append("")
+    lines = [f"Comparing: {diff.old_name} → {diff.new_name}", ""]
 
     if not diff.has_changes:
         lines.append("✓ No differences found.")
         return "\n".join(lines)
 
     # Summary
-    lines.append(f"  Nodes: +{len(diff.added_nodes)} added, "
-                 f"-{len(diff.removed_nodes)} removed, "
-                 f"~{len(diff.changed_nodes)} changed")
-    lines.append(f"  Edges: +{len(diff.added_edges)} added, "
-                 f"-{len(diff.removed_edges)} removed")
+    lines.append(
+        f"  Nodes: +{len(diff.added_nodes)} added, "
+        f"-{len(diff.removed_nodes)} removed, "
+        f"~{len(diff.changed_nodes)} changed"
+    )
+    lines.append(f"  Edges: +{len(diff.added_edges)} added, " f"-{len(diff.removed_edges)} removed")
     lines.append("")
 
-    # Regressions (most important)
     if diff.regressions:
-        lines.append("⚠ Duration Regressions:")
-        for d in diff.regressions:
-            pct = f" ({d.duration_change_pct:+.1f}%)" if d.duration_change_pct else ""
-            lines.append(f"  ↑ {d.name}: {d.old_duration_ms:.0f}ms → "
-                         f"{d.new_duration_ms:.0f}ms ({d.duration_change_ms:+.0f}ms{pct})")
-        lines.append("")
+        lines.extend(_format_duration_section("⚠ Duration Regressions:", diff.regressions, "↑"))
 
-    # Improvements
     if diff.improvements:
-        lines.append("✓ Duration Improvements:")
-        for d in diff.improvements:
-            pct = f" ({d.duration_change_pct:+.1f}%)" if d.duration_change_pct else ""
-            lines.append(f"  ↓ {d.name}: {d.old_duration_ms:.0f}ms → "
-                         f"{d.new_duration_ms:.0f}ms ({d.duration_change_ms:+.0f}ms{pct})")
-        lines.append("")
+        lines.extend(_format_duration_section("✓ Duration Improvements:", diff.improvements, "↓"))
 
-    # Added nodes
     if diff.added_nodes:
-        lines.append("+ Added Nodes:")
-        for d in diff.added_nodes:
-            dur = f" ({d.new_duration_ms:.0f}ms)" if d.new_duration_ms else ""
-            lines.append(f"  + {d.name}{dur}")
-        lines.append("")
+        lines.extend(_format_node_list("+ Added Nodes:", diff.added_nodes, "+", "new_duration_ms"))
 
-    # Removed nodes
     if diff.removed_nodes:
-        lines.append("- Removed Nodes:")
-        for d in diff.removed_nodes:
-            dur = f" ({d.old_duration_ms:.0f}ms)" if d.old_duration_ms else ""
-            lines.append(f"  - {d.name}{dur}")
-        lines.append("")
+        lines.extend(
+            _format_node_list("- Removed Nodes:", diff.removed_nodes, "-", "old_duration_ms")
+        )
 
-    # Edge changes
     if diff.edge_diffs:
         lines.append("Edge Changes:")
         for e in diff.edge_diffs:
@@ -215,4 +241,3 @@ def format_diff(diff: TraceDiff) -> str:
             lines.append(f"  {symbol} {e.source} → {e.target}")
 
     return "\n".join(lines)
-

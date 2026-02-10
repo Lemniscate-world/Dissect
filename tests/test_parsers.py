@@ -75,6 +75,8 @@ class TestOpenTelemetryParserUnit(unittest.TestCase):
         graph = parser.parse(data)
         self.assertEqual(len(graph.nodes), 2)
         self.assertEqual(len(graph.edges), 1)
+        assert graph.nodes["s1"].start_time is not None
+        assert graph.nodes["s1"].end_time is not None
         self.assertAlmostEqual(graph.nodes["s1"].start_time, 1.0)
         self.assertAlmostEqual(graph.nodes["s1"].end_time, 2.0)
 
@@ -172,11 +174,13 @@ class TestLangChainParserUnit(unittest.TestCase):
     def test_parse_timestamp_milliseconds(self):
         parser = LangChainParser()
         ts = parser._parse_timestamp(1705312200000)  # ms
+        assert ts is not None
         self.assertAlmostEqual(ts, 1705312200.0)
 
     def test_parse_timestamp_seconds(self):
         parser = LangChainParser()
         ts = parser._parse_timestamp(1705312200.0)
+        assert ts is not None
         self.assertAlmostEqual(ts, 1705312200.0)
 
     def test_parse_timestamp_invalid(self):
@@ -327,8 +331,12 @@ class TestAutoGenParserUnit(unittest.TestCase):
     def test_parse_timestamp_variants(self):
         parser = AutoGenParser()
         self.assertIsNone(parser._parse_timestamp(None))
-        self.assertAlmostEqual(parser._parse_timestamp(1705312200.0), 1705312200.0)
-        self.assertAlmostEqual(parser._parse_timestamp(1705312200000), 1705312200.0)
+        ts_sec = parser._parse_timestamp(1705312200.0)
+        ts_ms = parser._parse_timestamp(1705312200000)
+        assert ts_sec is not None
+        assert ts_ms is not None
+        self.assertAlmostEqual(ts_sec, 1705312200.0)
+        self.assertAlmostEqual(ts_ms, 1705312200.0)
         self.assertIsNone(parser._parse_timestamp("bad-date"))
 
 
@@ -342,7 +350,9 @@ class TestAutoDetection(unittest.TestCase):
         return f.name
 
     def test_detect_opentelemetry(self):
-        path = self._write_temp_json({"spans": [{"spanId": "s1", "name": "test", "attributes": []}]})
+        path = self._write_temp_json(
+            {"spans": [{"spanId": "s1", "name": "test", "attributes": []}]}
+        )
         try:
             graph = parse_trace_file(path)
             self.assertIsInstance(graph, OrchestrationGraph)
@@ -350,7 +360,9 @@ class TestAutoDetection(unittest.TestCase):
             os.remove(path)
 
     def test_detect_langchain(self):
-        path = self._write_temp_json({"runs": [{"id": "r1", "name": "chain", "run_type": "chain", "child_runs": []}]})
+        path = self._write_temp_json(
+            {"runs": [{"id": "r1", "name": "chain", "run_type": "chain", "child_runs": []}]}
+        )
         try:
             graph = parse_trace_file(path)
             self.assertIsInstance(graph, OrchestrationGraph)
@@ -366,7 +378,9 @@ class TestAutoDetection(unittest.TestCase):
             os.remove(path)
 
     def test_detect_autogen(self):
-        path = self._write_temp_json({"messages": [{"message_id": "m1", "sender": "A", "content": "hi"}]})
+        path = self._write_temp_json(
+            {"messages": [{"message_id": "m1", "sender": "A", "content": "hi"}]}
+        )
         try:
             graph = parse_trace_file(path)
             self.assertIsInstance(graph, OrchestrationGraph)

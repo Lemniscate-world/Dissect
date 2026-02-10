@@ -28,7 +28,7 @@ repos:
         entry: .venv/bin/python3 -m pylint
         language: system
         types: [python]
-        args: [ "dissect/" ]
+        args: [ "--fail-under=9.5", "dissect/" ]
 
       - id: generate-diagrams
         name: Generate Diagrams

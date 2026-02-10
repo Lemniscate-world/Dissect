@@ -70,7 +70,6 @@ class TestOrchestrationGraph(unittest.TestCase):
         self.assertAlmostEqual(nodes["B"]["heat_score"], 0.5)
         self.assertAlmostEqual(nodes["C"]["heat_score"], 1.0)
 
-
     def test_get_node(self):
         """Test get_node returns correct node or None."""
         graph = OrchestrationGraph()
@@ -182,6 +181,7 @@ class TestOrchestrationGraph(unittest.TestCase):
     def test_node_duration_ms(self):
         """Test Node.duration_ms property."""
         node_with = Node("1", "A", NodeType.AGENT, start_time=1.0, end_time=1.5)
+        assert node_with.duration_ms is not None
         self.assertAlmostEqual(node_with.duration_ms, 500.0)
 
         node_without = Node("2", "B", NodeType.AGENT)

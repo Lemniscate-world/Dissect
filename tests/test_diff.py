@@ -66,6 +66,8 @@ class TestDiffGraphs(unittest.TestCase):
         regs = result.regressions
         self.assertEqual(len(regs), 1)
         self.assertEqual(regs[0].name, "Agent A")
+        assert regs[0].duration_change_ms is not None
+        assert regs[0].duration_change_pct is not None
         self.assertAlmostEqual(regs[0].duration_change_ms, 2000.0)
         self.assertAlmostEqual(regs[0].duration_change_pct, 200.0)
 
@@ -77,6 +79,7 @@ class TestDiffGraphs(unittest.TestCase):
         result = diff_graphs(old, new)
         imps = result.improvements
         self.assertEqual(len(imps), 1)
+        assert imps[0].duration_change_ms is not None
         self.assertTrue(imps[0].duration_change_ms < 0)
 
     def test_edge_added(self):
@@ -124,21 +127,35 @@ class TestFormatDiff(unittest.TestCase):
         self.assertIn("No differences found", output)
 
     def test_regression_output(self):
-        diff = TraceDiff(old_name="A", new_name="B", node_diffs=[
-            NodeDiff(node_id="1", name="Slow Agent", status="changed",
-                     old_duration_ms=1000, new_duration_ms=2000,
-                     duration_change_ms=1000, duration_change_pct=100.0),
-        ])
+        diff = TraceDiff(
+            old_name="A",
+            new_name="B",
+            node_diffs=[
+                NodeDiff(
+                    node_id="1",
+                    name="Slow Agent",
+                    status="changed",
+                    old_duration_ms=1000,
+                    new_duration_ms=2000,
+                    duration_change_ms=1000,
+                    duration_change_pct=100.0,
+                ),
+            ],
+        )
         output = format_diff(diff)
         self.assertIn("Regressions", output)
         self.assertIn("Slow Agent", output)
         self.assertIn("+1000ms", output)
 
     def test_added_removed_output(self):
-        diff = TraceDiff(old_name="A", new_name="B", node_diffs=[
-            NodeDiff(node_id="1", name="New Agent", status="added", new_duration_ms=500),
-            NodeDiff(node_id="2", name="Old Agent", status="removed", old_duration_ms=300),
-        ])
+        diff = TraceDiff(
+            old_name="A",
+            new_name="B",
+            node_diffs=[
+                NodeDiff(node_id="1", name="New Agent", status="added", new_duration_ms=500),
+                NodeDiff(node_id="2", name="Old Agent", status="removed", old_duration_ms=300),
+            ],
+        )
         output = format_diff(diff)
         self.assertIn("Added Nodes", output)
         self.assertIn("Removed Nodes", output)
@@ -146,10 +163,14 @@ class TestFormatDiff(unittest.TestCase):
         self.assertIn("Old Agent", output)
 
     def test_edge_changes_output(self):
-        diff = TraceDiff(old_name="A", new_name="B", edge_diffs=[
-            EdgeDiff(source="X", target="Y", status="added"),
-            EdgeDiff(source="Y", target="Z", status="removed"),
-        ])
+        diff = TraceDiff(
+            old_name="A",
+            new_name="B",
+            edge_diffs=[
+                EdgeDiff(source="X", target="Y", status="added"),
+                EdgeDiff(source="Y", target="Z", status="removed"),
+            ],
+        )
         output = format_diff(diff)
         self.assertIn("Edge Changes", output)
         self.assertIn("+ X", output)
@@ -158,4 +179,3 @@ class TestFormatDiff(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

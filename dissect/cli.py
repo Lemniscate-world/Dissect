@@ -109,7 +109,7 @@ def visualize_command(args):
 
 def diff_command(args):
     """Compare two trace files and report differences."""
-    print(f"Comparing traces:")
+    print("Comparing traces:")
     print(f"  Old: {args.old}")
     print(f"  New: {args.new}")
 

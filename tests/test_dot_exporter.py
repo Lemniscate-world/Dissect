@@ -48,12 +48,12 @@ class TestDotExporter(unittest.TestCase):
         graph.add_node(Node("u", "Unknown", NodeType.UNKNOWN))
 
         dot = export_dot(graph)
-        self.assertIn('#E3F2FD', dot)  # AGENT
-        self.assertIn('#FFF3E0', dot)  # TOOL
-        self.assertIn('#F3E5F5', dot)  # LLM_CALL
-        self.assertIn('#E8F5E9', dot)  # USER_INPUT
-        self.assertIn('#FFEBEE', dot)  # OUTPUT
-        self.assertIn('#F5F5F5', dot)  # UNKNOWN
+        self.assertIn("#E3F2FD", dot)  # AGENT
+        self.assertIn("#FFF3E0", dot)  # TOOL
+        self.assertIn("#F3E5F5", dot)  # LLM_CALL
+        self.assertIn("#E8F5E9", dot)  # USER_INPUT
+        self.assertIn("#FFEBEE", dot)  # OUTPUT
+        self.assertIn("#F5F5F5", dot)  # UNKNOWN
 
     def test_export_dot_with_duration(self):
         """Test nodes with durations include duration in label."""
@@ -85,7 +85,7 @@ class TestDotExporter(unittest.TestCase):
         self.assertIn('"1" -> "2";', dot)
         # Should NOT have a label attribute on this edge
         lines = dot.split("\n")
-        edge_lines = [l for l in lines if '"1" -> "2"' in l]
+        edge_lines = [line for line in lines if '"1" -> "2"' in line]
         self.assertEqual(len(edge_lines), 1)
         self.assertNotIn("label", edge_lines[0])
 
@@ -114,4 +114,3 @@ class TestDotExporter(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
