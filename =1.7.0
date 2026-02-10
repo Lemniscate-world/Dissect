@@ -1,8 +1,0 @@
-Collecting tree-sitter-languages
-  Using cached tree_sitter_languages-1.10.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (10 kB)
-Collecting tree-sitter (from tree-sitter-languages)
-  Using cached tree_sitter-0.24.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (9.8 kB)
-Using cached tree_sitter_languages-1.10.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (8.4 MB)
-Using cached tree_sitter-0.24.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (579 kB)
-Installing collected packages: tree-sitter, tree-sitter-languages
-Successfully installed tree-sitter-0.24.0 tree-sitter-languages-1.10.2

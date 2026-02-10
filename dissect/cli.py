@@ -7,6 +7,7 @@ Command-line interface for the Orchestration Visualizer.
 import argparse
 import sys
 
+from .diff import diff_graphs, format_diff
 from .explain import explain_graph
 from .exporters.dot import save_dot
 from .exporters.html import save_html
@@ -106,13 +107,27 @@ def visualize_command(args):
         sys.exit(1)
 
 
-def serve_command(args):
-    """Start a local server for real-time trace viewing."""
-    print("Starting Dissect server...")
-    print(f"  Port: {args.port}")
-    print(f"  Open: http://localhost:{args.port}")
-    print("\nNote: Real-time server not yet implemented.")
-    print("Use 'dissect visualize' to generate static visualizations.")
+def diff_command(args):
+    """Compare two trace files and report differences."""
+    print(f"Comparing traces:")
+    print(f"  Old: {args.old}")
+    print(f"  New: {args.new}")
+
+    try:
+        old_graph = parse_trace_file(args.old)
+    except Exception as e:
+        print(f"Error parsing old trace: {e}")
+        sys.exit(1)
+
+    try:
+        new_graph = parse_trace_file(args.new)
+    except Exception as e:
+        print(f"Error parsing new trace: {e}")
+        sys.exit(1)
+
+    result = diff_graphs(old_graph, new_graph)
+    print()
+    print(format_diff(result))
 
 
 def main():
@@ -141,15 +156,6 @@ def main():
     )
     viz_parser.set_defaults(func=visualize_command)
 
-    # Serve command (placeholder)
-    serve_parser = subparsers.add_parser(
-        "serve", help="Start local server for real-time visualization"
-    )
-    serve_parser.add_argument(
-        "--port", "-p", type=int, default=8080, help="Port to listen on (default: 8080)"
-    )
-    serve_parser.set_defaults(func=serve_command)
-
     # Explain command
     explain_parser = subparsers.add_parser(
         "explain", help="Generate AI-powered insights from trace"
@@ -164,6 +170,14 @@ def main():
     )
     explain_parser.add_argument("--model", "-m", help="Model name to use")
     explain_parser.set_defaults(func=explain_command)
+
+    # Diff command
+    diff_parser = subparsers.add_parser(
+        "diff", help="Compare two trace files and report differences"
+    )
+    diff_parser.add_argument("--old", required=True, help="Path to old/baseline trace file (JSON)")
+    diff_parser.add_argument("--new", required=True, help="Path to new trace file (JSON)")
+    diff_parser.set_defaults(func=diff_command)
 
     # Version
     parser.add_argument("--version", "-v", action="version", version="Dissect 2.0.0")

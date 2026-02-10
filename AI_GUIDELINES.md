@@ -53,7 +53,30 @@ Dissect is a **Translation Layer**.
     - **Logic**: Graph structure verification.
     - **Fuzzy**: Random input testing.
 
-### 6. Protocol
+### 6. Critical Thinking — "Devil's Advocate" Mode
+AI assistants working on this project MUST NOT be passive executors. You are a **co-engineer**, not a typist.
+
+**Before writing any code, always ask yourself:**
+- **"Does this actually help users?"** — If a feature doesn't solve a real problem, push back. Ask the human to justify it.
+- **"Is there a simpler way?"** — Challenge over-engineering. If 10 lines replace 100, say so.
+- **"What breaks?"** — Proactively identify edge cases, failure modes, and security risks before they become bugs.
+- **"Who is this for?"** — If the target user wouldn't understand or benefit from a change, flag it.
+- **"Does this already exist?"** — Before building, check if a library, pattern, or existing code already solves the problem.
+
+**During implementation:**
+- **Flag code smells** — If you see dead code, unclear naming, duplicated logic, or tight coupling, call it out even if you weren't asked to.
+- **Question scope creep** — If a task is growing beyond its original intent, pause and ask: "Should we split this?"
+- **Suggest tests for the scary parts** — If a piece of logic is complex or critical, proactively suggest testing it.
+- **Challenge assumptions** — If the human says "we need X", it's OK to ask "why not Y?" if Y is demonstrably better.
+
+**After implementation:**
+- **Review your own work** — Before declaring done, re-read the diff. Would you approve this PR?
+- **Suggest improvements** — "This works, but here's how we could make it better in the future: ..."
+- **Identify technical debt** — If you had to cut corners, document it explicitly.
+
+> **The goal: every interaction should leave the codebase better than we found it, and every feature should genuinely serve the people who use Dissect.**
+
+### 7. Protocol
 - **Step-by-Step**: Stick to the plan.
 - **Phase Gate**: Verify Phase N completion before N+1.
 - **Context Persistence**: Always update and maintain artifacts in `./.antigravity/artifacts/` (tasks, plans, walkthroughs). These are the single source of truth for project evolution across AI assistants and sessions.

@@ -6,7 +6,7 @@ import argparse
 import unittest
 from unittest.mock import MagicMock, patch
 
-from dissect.cli import main, serve_command, trace_command, visualize_command
+from dissect.cli import diff_command, main, trace_command, visualize_command
 
 
 class TestCLI(unittest.TestCase):
@@ -51,13 +51,6 @@ class TestCLI(unittest.TestCase):
 
         mock_save_html.assert_called_with(mock_graph, "out.html")
 
-    @patch("builtins.print")
-    def test_serve_command(self, mock_print):
-        """Test serve command (placeholder)."""
-        args = argparse.Namespace(port=9090)
-        serve_command(args)
-        mock_print.assert_called()
-
     @patch("dissect.cli.explain_graph")
     @patch("dissect.cli.parse_trace_file")
     def test_explain_command(self, mock_parse, mock_explain):
@@ -74,6 +67,26 @@ class TestCLI(unittest.TestCase):
 
         mock_parse.assert_called_once_with("test.json")
         mock_explain.assert_called_once()
+
+
+    @patch("dissect.cli.format_diff")
+    @patch("dissect.cli.diff_graphs")
+    @patch("dissect.cli.parse_trace_file")
+    @patch("builtins.print")
+    def test_diff_command(self, mock_print, mock_parse, mock_diff, mock_format):
+        """Test diff command execution."""
+        mock_old = MagicMock()
+        mock_new = MagicMock()
+        mock_parse.side_effect = [mock_old, mock_new]
+        mock_diff.return_value = MagicMock()
+        mock_format.return_value = "No differences"
+
+        args = argparse.Namespace(old="old.json", new="new.json")
+        diff_command(args)
+
+        self.assertEqual(mock_parse.call_count, 2)
+        mock_diff.assert_called_once_with(mock_old, mock_new)
+        mock_format.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -1,3 +1,55 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dissect-ai"
+version = "2.0.0"
+description = "Visualize AI agent workflows — LangChain, CrewAI, AutoGen, OpenTelemetry"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Dissect Contributors"},
+]
+keywords = ["ai", "agents", "visualization", "langchain", "crewai", "autogen", "opentelemetry", "tracing"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "requests>=2.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+]
+
+[project.scripts]
+dissect = "dissect.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/kuro/dissect"
+Repository = "https://github.com/kuro/dissect"
+Issues = "https://github.com/kuro/dissect/issues"
+
+[tool.setuptools.packages.find]
+include = ["dissect*"]
+exclude = ["tests*", "archive*", "benchmarks*", "examples*", "docs*", "scripts*"]
+
 [tool.ruff]
 line-length = 100
 select = ["E", "F", "I", "C90", "B", "PL"]
@@ -18,3 +70,10 @@ disable = [
     "C0116", # Missing function docstring
     "R0903", # Too few public methods
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["dissect"]
+omit = ["dissect/exporters/html.py"]
